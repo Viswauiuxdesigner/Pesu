@@ -73,14 +73,20 @@ export function isAskingForTamilExplanation(text: string): boolean {
   return (
     lower.includes('explain in tamil') ||
     lower.includes('explain this in tamil') ||
+    lower.includes('explain that in tamil') ||
     lower.includes('tamil explanation') ||
     lower.includes('tamil-la sollu') ||
-    lower.includes('tamilil') ||
-    lower.includes('தமிழில்') ||
+    lower.includes('tamil la sollu') ||
+    lower.includes('tamilil sollu') ||
+    lower.includes('tamilil vilakku') ||
+    lower.includes('தமிழ் விளக்கம்') ||
     lower.includes('தமிழில் சொல்') ||
+    lower.includes('தமிழில் சொல்லு') ||
+    lower.includes('தமிழில் விளக்கு') ||
     lower.includes('tamil la solreengala') ||
     lower.includes('tamil artham') ||
-    lower.includes('meaning in tamil')
+    lower.includes('meaning in tamil') ||
+    lower.includes('tamil meaning')
   );
 }
 

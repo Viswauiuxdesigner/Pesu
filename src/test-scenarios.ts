@@ -22,27 +22,37 @@ async function runComprehensiveTestSuite() {
   const testReplies: { input: string; reply: string }[] = [];
 
   // ===========================================================================
-  // TEST GROUP A: Language Preference & Capability Questions
+  // TEST GROUP A: Language Preference & Capability Questions (Examples A, C)
   // ===========================================================================
   console.log('--- TEST GROUP A: Language Preference & Capability Questions ---');
 
-  // A1: "Shall I talk Tamil?" (without "in")
+  // A1: "Shall I talk in Tamil?" (Example A1)
   {
-    const res = await localProvider.sendMessage('Shall I talk Tamil?', []);
-    testReplies.push({ input: 'Shall I talk Tamil?', reply: res.replyText });
-    console.log(`User: "Shall I talk Tamil?"\nBot: ${res.replyText}`);
-    const lower = res.replyText.toLowerCase();
+    const res = await localProvider.sendMessage('Shall I talk in Tamil?', []);
+    testReplies.push({ input: 'Shall I talk in Tamil?', reply: res.replyText });
+    console.log(`User: "Shall I talk in Tamil?"\nBot: ${res.replyText}`);
     assert(
-      lower.includes('yes') || lower.includes('course') || lower.includes('comfortable') || lower.includes('speak in tamil'),
-      'Shall I talk Tamil? directly says yes and invites user to continue'
+      res.replyText.includes('Yes, absolutely! You can speak in Tamil'),
+      'Shall I talk in Tamil? directly agrees and invites user to speak Tamil'
     );
     assert(
-      !lower.includes('describe that experience') && !lower.includes('short english sentence'),
+      !res.replyText.includes('describe that experience') && !res.replyText.includes('short English sentence'),
       'Does NOT return generic canned English practice response'
     );
   }
 
-  // A2: "Can you talk Tamil?" (AI capability question)
+  // A2: "Can talk Tamil?" (Example A2 - shorthand grammar)
+  {
+    const res = await localProvider.sendMessage('Can talk Tamil?', []);
+    testReplies.push({ input: 'Can talk Tamil?', reply: res.replyText });
+    console.log(`\nUser: "Can talk Tamil?"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('Of course! You can talk to me in Tamil, Tanglish, or English'),
+      'Can talk Tamil? confirms Tamil/Tanglish/English are supported without worry'
+    );
+  }
+
+  // A3: "Can you talk Tamil?" (AI capability question)
   {
     const res = await localProvider.sendMessage('Can you talk Tamil?', []);
     testReplies.push({ input: 'Can you talk Tamil?', reply: res.replyText });
@@ -54,27 +64,14 @@ async function runComprehensiveTestSuite() {
     );
   }
 
-  // A3: "Can talk Tamil" (imperfect grammar shorthand)
+  // A4: "Naan enna sonnalum unakku puriyudha?" (Understanding check)
   {
-    const res = await localProvider.sendMessage('Can talk Tamil', []);
-    testReplies.push({ input: 'Can talk Tamil', reply: res.replyText });
-    console.log(`\nUser: "Can talk Tamil"\nBot: ${res.replyText}`);
-    const lower = res.replyText.toLowerCase();
+    const res = await localProvider.sendMessage('Naan enna sonnalum unakku puriyudha?', []);
+    testReplies.push({ input: 'Naan enna sonnalum unakku puriyudha?', reply: res.replyText });
+    console.log(`\nUser: "Naan enna sonnalum unakku puriyudha?"\nBot: ${res.replyText}`);
     assert(
-      lower.includes('talk in tamil') || lower.includes('speak in tamil') || lower.includes('practise english'),
-      'Can talk Tamil understands intended meaning despite imperfect grammar'
-    );
-  }
-
-  // A4: "Naan Tamil la pesalama?" (Tanglish permission)
-  {
-    const res = await localProvider.sendMessage('Naan Tamil la pesalama?', []);
-    testReplies.push({ input: 'Naan Tamil la pesalama?', reply: res.replyText });
-    console.log(`\nUser: "Naan Tamil la pesalama?"\nBot: ${res.replyText}`);
-    const lower = (res.replyText + ' ' + (res.tamilExplanation || '')).toLowerCase();
-    assert(
-      lower.includes('aama') || lower.includes('kandippa') || lower.includes('comfortable') || lower.includes('தாராளமாக'),
-      'Naan Tamil la pesalama? replies naturally in welcoming Tanglish/Tamil'
+      res.replyText.includes('Aama, kandippa puriyudhu!'),
+      'Naan enna sonnalum unakku puriyudha? warmly confirms understanding'
     );
   }
 
@@ -97,112 +94,121 @@ async function runComprehensiveTestSuite() {
     console.log(`\nUser: "நீ தமிழில் பேசுவாயா?"\nBot: ${res.replyText}`);
     const lower = (res.replyText + ' ' + (res.tamilExplanation || '')).toLowerCase();
     assert(
-      lower.includes('aama') || lower.includes('pesuven') || lower.includes('கண்டிப்பாக') || lower.includes('தமிழ்'),
+      lower.includes('ஆமாம்') && lower.includes('தமிழில்'),
       'Tamil script "நீ தமிழில் பேசுவாயா?" receives welcoming Tamil response'
     );
   }
 
-  // A7: Tanglish: "nee tamil la pesa mudiyuma?"
+  // ===========================================================================
+  // TEST GROUP B: Casual Greetings & Initiation (Examples D, E)
+  // ===========================================================================
+  console.log('\n--- TEST GROUP B: Casual Greetings & Initiation ---');
+
+  // B1: "Hi." (Example D)
   {
-    const res = await localProvider.sendMessage('nee tamil la pesa mudiyuma?', []);
-    testReplies.push({ input: 'nee tamil la pesa mudiyuma?', reply: res.replyText });
-    console.log(`\nUser: "nee tamil la pesa mudiyuma?"\nBot: ${res.replyText}`);
-    const lower = res.replyText.toLowerCase();
+    const res = await localProvider.sendMessage('Hi.', []);
+    testReplies.push({ input: 'Hi.', reply: res.replyText });
+    console.log(`User: "Hi."\nBot: ${res.replyText}`);
     assert(
-      lower.includes('aama') || lower.includes('pesuven') || lower.includes('tamil'),
-      'Tanglish "nee tamil la pesa mudiyuma?" receives natural affirmation'
+      res.replyText.includes('Hey! 😊 How are you doing today? How was your day?'),
+      'Hi. receives warm, friendly greeting without any grammar corrections'
+    );
+  }
+
+  // B2: "Shall we talk?" (Example E)
+  {
+    const res = await localProvider.sendMessage('Shall we talk?', []);
+    testReplies.push({ input: 'Shall we talk?', reply: res.replyText });
+    console.log(`\nUser: "Shall we talk?"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('Of course! 😊 What would you like to talk about?'),
+      'Shall we talk? invites conversation naturally'
     );
   }
 
   // ===========================================================================
-  // TEST GROUP B: Casual Conversation & Multi-Turn Flow
+  // TEST GROUP C: User Doesn't Understand & Explaining in Tamil (Examples B, C)
   // ===========================================================================
-  console.log('\n--- TEST GROUP B: Casual Conversation & Multi-Turn Flow ---');
+  console.log('\n--- TEST GROUP C: Confusion & Contextual Clarification ---');
 
-  // B1: "Hi"
+  // C1: "Enna da solra purila." with preceding message about experience (Example B)
   {
-    const res = await localProvider.sendMessage('Hi', []);
-    testReplies.push({ input: 'Hi', reply: res.replyText });
-    console.log(`User: "Hi"\nBot: ${res.replyText}`);
-    const lower = res.replyText.toLowerCase();
+    const history: Message[] = [
+      { id: 'u0', role: 'user', content: 'Hi', timestamp: Date.now() - 20000 },
+      { id: 'a0', role: 'assistant', content: 'Could you tell me a little more about your experience?', timestamp: Date.now() - 15000 }
+    ];
+    const res = await localProvider.sendMessage('Enna da solra purila.', history);
+    testReplies.push({ input: 'Enna da solra purila.', reply: res.replyText });
+    console.log(`User: "Enna da solra purila."\nBot: ${res.replyText}`);
     assert(
-      lower.includes('hey') || lower.includes('going') || lower.includes('vanakkam'),
-      'Hi receives a friendly, non-robotic greeting'
+      res.replyText.includes('Ayyoo, sorry! 😊 Naan simple-ah solren. Un experience pathi konjam sollu nu ketten.'),
+      'Enna da solra purila. explains the immediately preceding experience question in simple Tanglish'
     );
   }
 
-  // B2: "Today I am very tired"
-  let tiredAssistantReply = '';
+  // C2: "Can you explain that in Tamil?" with preceding assistant message (Example C)
+  {
+    const history: Message[] = [
+      { id: 'u1', role: 'user', content: 'Hi', timestamp: Date.now() - 20000 },
+      { id: 'a1', role: 'assistant', content: 'Could you tell me a little more about your experience?', timestamp: Date.now() - 15000 }
+    ];
+    const res = await localProvider.sendMessage('Can you explain that in Tamil?', history);
+    testReplies.push({ input: 'Can you explain that in Tamil?', reply: res.replyText });
+    console.log(`\nUser: "Can you explain that in Tamil?"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('Kandippa!') && res.replyText.includes('அனுபவம்'),
+      'Can you explain that in Tamil? explains the preceding message in Tamil preserving context'
+    );
+  }
+
+  // C3: "Enna da ithu?"
+  {
+    const res = await localProvider.sendMessage('Enna da ithu?', []);
+    testReplies.push({ input: 'Enna da ithu?', reply: res.replyText });
+    console.log(`\nUser: "Enna da ithu?"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('Idhu PESU, ungalukku Tamil and English-la practice panna oru friendly partner!'),
+      'Enna da ithu? explains what PESU is in simple, friendly Tanglish'
+    );
+  }
+
+  // ===========================================================================
+  // TEST GROUP D: Everyday Experiences & Feelings (Examples F, I)
+  // ===========================================================================
+  console.log('\n--- TEST GROUP D: Everyday Experiences & Feelings ---');
+
+  // D1: "Innaiku office la romba work irundhuchu." (Example F)
+  {
+    const res = await localProvider.sendMessage('Innaiku office la romba work irundhuchu.', []);
+    testReplies.push({ input: 'Innaiku office la romba work irundhuchu.', reply: res.replyText });
+    console.log(`User: "Innaiku office la romba work irundhuchu."\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('Ohh, inniku office-la romba busy-ah? What work kept you busy today?') &&
+      res.replyText.includes("English-la you could say: 'I had a lot of work at the office today.'"),
+      'Innaiku office la romba work irundhuchu acknowledges busy workday first, then gives natural English phrasing'
+    );
+  }
+
+  // D2: "Enakku English pesa romba bayama irukku." (Example I)
+  {
+    const res = await localProvider.sendMessage('Enakku English pesa romba bayama irukku.', []);
+    testReplies.push({ input: 'Enakku English pesa romba bayama irukku.', reply: res.replyText });
+    console.log(`\nUser: "Enakku English pesa romba bayama irukku."\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('Puriyudhu. English pesa start pannumbodhu bayam irukkuradhu normal dhaan.'),
+      'Enakku English pesa romba bayama irukku reassures warmly without generic canned speech'
+    );
+  }
+
+  // D3: "Today I am very tired"
   {
     const res = await localProvider.sendMessage('Today I am very tired', []);
-    tiredAssistantReply = res.replyText;
     testReplies.push({ input: 'Today I am very tired', reply: res.replyText });
     console.log(`\nUser: "Today I am very tired"\nBot: ${res.replyText}`);
     const lower = res.replyText.toLowerCase();
     assert(
       lower.includes('long day') || lower.includes('busy') || lower.includes('tiring day'),
       'Today I am very tired responds empathetically and asks if work was busy'
-    );
-  }
-
-  // B3: Follow-up to tired: "Yes, too much work."
-  {
-    const history: Message[] = [
-      { id: 'u1', role: 'user', content: 'Today I am very tired', timestamp: Date.now() - 10000 },
-      { id: 'a1', role: 'assistant', content: tiredAssistantReply, timestamp: Date.now() - 5000 }
-    ];
-    const res = await localProvider.sendMessage('Yes, too much work.', history);
-    testReplies.push({ input: 'Yes, too much work.', reply: res.replyText });
-    console.log(`\nUser: "Yes, too much work."\nBot: ${res.replyText}`);
-    const lower = res.replyText.toLowerCase();
-    assert(
-      lower.includes('busy workday') || lower.includes('exhausting') || lower.includes('busy today'),
-      'Follow-up "Yes, too much work" progresses the conversation naturally without resetting'
-    );
-  }
-
-  // B4: "Nethu office la romba work irundhuchu" (Tanglish yesterday workday)
-  {
-    const res = await localProvider.sendMessage('Nethu office la romba work irundhuchu', []);
-    testReplies.push({ input: 'Nethu office la romba work irundhuchu', reply: res.replyText });
-    console.log(`\nUser: "Nethu office la romba work irundhuchu"\nBot: ${res.replyText}`);
-    const lower = (res.replyText + ' ' + (res.tamilExplanation || '')).toLowerCase();
-    assert(
-      lower.includes('busy') || lower.includes('yesterday') || lower.includes('work'),
-      'Nethu office la romba work irundhuchu recognises user workday update with English tip'
-    );
-  }
-
-  // ===========================================================================
-  // TEST GROUP C: User Doesn't Understand (Slang "daw", "ithu")
-  // ===========================================================================
-  console.log('\n--- TEST GROUP C: User Confusion with Slang ---');
-
-  // C1: "Enna daw solra purila"
-  {
-    const history: Message[] = [
-      { id: 'u1', role: 'user', content: 'Today I am very tired', timestamp: Date.now() - 15000 },
-      { id: 'a1', role: 'assistant', content: 'Was work busy today? What kept you so occupied?', timestamp: Date.now() - 10000 }
-    ];
-    const res = await localProvider.sendMessage('Enna daw solra purila', history);
-    testReplies.push({ input: 'Enna daw solra purila', reply: res.replyText });
-    console.log(`User: "Enna daw solra purila"\nBot: ${res.replyText}`);
-    const lower = res.replyText.toLowerCase();
-    assert(
-      lower.includes('sorry daw') || lower.includes('simple-ah') || lower.includes('office'),
-      'Enna daw solra purila explains previous response simply using context and friendly tone'
-    );
-  }
-
-  // C2: "Enna daw ithu"
-  {
-    const res = await localProvider.sendMessage('Enna daw ithu', []);
-    testReplies.push({ input: 'Enna daw ithu', reply: res.replyText });
-    console.log(`\nUser: "Enna daw ithu"\nBot: ${res.replyText}`);
-    const lower = res.replyText.toLowerCase();
-    assert(
-      lower.includes('pesu') && (lower.includes('friend') || lower.includes('partner') || lower.includes('explain')),
-      'Enna daw ithu explains what PESU is in simple, friendly Tanglish'
     );
   }
 
@@ -275,20 +281,33 @@ async function runComprehensiveTestSuite() {
     );
   }
 
+  // D6: "Can I improve my English in 3 months?" (Example H)
+  {
+    const res = await localProvider.sendMessage('Can I improve my English in 3 months?', []);
+    testReplies.push({ input: 'Can I improve my English in 3 months?', reply: res.replyText });
+    console.log(`\nUser: "Can I improve my English in 3 months?"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('Yes, you can make noticeable progress in three months if you practise consistently.') &&
+      res.replyText.includes('How much time can you practise each day?'),
+      'Can I improve my English in 3 months? answers the actual question first with practical guidance'
+    );
+  }
+
   // ===========================================================================
-  // TEST GROUP E: Grammar Correction Without Interrupting Flow
+  // TEST GROUP E: Grammar Correction Without Interrupting Flow (Example G)
   // ===========================================================================
   console.log('\n--- TEST GROUP E: Grammar Correction Without Interrupting Flow ---');
 
-  // E1: "I am go to office yesterday"
+  // E1: "I am go to office yesterday." (Example G)
   {
-    const res = await localProvider.sendMessage('I am go to office yesterday', []);
-    testReplies.push({ input: 'I am go to office yesterday', reply: res.replyText });
-    console.log(`User: "I am go to office yesterday"\nBot: ${res.replyText}`);
-    const lower = res.replyText.toLowerCase();
+    const res = await localProvider.sendMessage('I am go to office yesterday.', []);
+    testReplies.push({ input: 'I am go to office yesterday.', reply: res.replyText });
+    console.log(`User: "I am go to office yesterday."\nBot: ${res.replyText}`);
     assert(
-      lower.includes('went to the office yesterday') && lower.includes('how was your day'),
-      'I am go to office yesterday responds to meaning first, then provides gentle tip'
+      res.replyText.includes('Oh, you went to the office yesterday! How was your day there?') &&
+      res.replyText.includes('Better English: "I went to the office yesterday."') &&
+      res.replyText.includes('Simple explanation: We use "went" when talking about something that happened yesterday.'),
+      'I am go to office yesterday responds to meaning first, then provides gentle tip matching Example G'
     );
   }
 

@@ -21,7 +21,7 @@ export const COMMON_GRAMMAR_RULES: Rule[] = [
       const article = ['the', 'a', 'my', 'his', 'her'].some(a => place.startsWith(a)) ? '' : 'the ';
       return {
         improved: `I went to ${article}${place} ${time}.`,
-        explanationInEnglish: `When talking about the past ("yesterday"), use "went" instead of "am go".`,
+        explanationInEnglish: `We use "went" when talking about something that happened yesterday.`,
         explanationInTamil: `கடந்த காலம் (நேற்று - yesterday) பற்றி பேசும்போது "am go" என்று சொல்லக்கூடாது, "went" என்று சொல்ல வேண்டும்.`
       };
     }
