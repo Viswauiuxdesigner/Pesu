@@ -218,7 +218,9 @@ export const App: React.FC = () => {
     try {
       const response = await activeProvider.sendMessage(trimmed, newHistory, {
         scenarioId: activeScenarioId,
-        alwaysShowTamilExplanation: settings.alwaysShowTamilExplanation
+        alwaysShowTamilExplanation: settings.alwaysShowTamilExplanation,
+        interfaceLanguage: settings.interfaceLanguage,
+        detectedLanguage: detectedLang
       });
 
       const assistantMessage: Message = {

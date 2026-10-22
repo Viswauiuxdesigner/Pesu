@@ -19,6 +19,8 @@ export interface ConversationOptions {
   scenarioId?: string;
   alwaysShowTamilExplanation?: boolean;
   history?: Message[];
+  interfaceLanguage?: 'en' | 'ta';
+  detectedLanguage?: DetectedLanguage;
 }
 
 export interface AIConversationProvider {

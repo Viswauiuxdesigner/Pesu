@@ -63,7 +63,7 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  const { message, history, scenarioId } = req.body || {};
+  const { message, history, scenarioId, interfaceLanguage, detectedLanguage } = req.body || {};
 
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'Message text is required.' });
@@ -92,7 +92,7 @@ export default async function handler(req: any, res: any) {
       ...formattedHistory,
       {
         role: 'user',
-        parts: [{ text: `User message: "${message}". Current scenario: ${scenarioId || 'General'}. Respond following PESU system rules and return JSON only.` }]
+        parts: [{ text: `User message: "${message}". Detected input language: ${detectedLanguage || 'auto'}. User interface language: ${interfaceLanguage || 'en'}. Current scenario: ${scenarioId || 'General'}. Respond following PESU system rules and return JSON only.` }]
       }
     ];
 

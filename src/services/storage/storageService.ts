@@ -5,9 +5,9 @@ const MESSAGES_KEY = 'pesu_chat_history_v1';
 const STATS_KEY = 'pesu_session_stats_v1';
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  aiProvider: 'local',
+  aiProvider: 'gemini',
   geminiApiKey: '',
-  useServerlessBackend: false,
+  useServerlessBackend: true,
   recognitionLanguage: 'auto',
   speechRate: 0.92,
   autoSpeakResponses: true,

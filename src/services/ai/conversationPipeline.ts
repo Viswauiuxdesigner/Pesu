@@ -40,6 +40,13 @@ export class ConversationPipeline {
       activeTopic = 'friend_conflict';
       previousEntities.person = 'friend';
     } else if (
+      combinedRecentText.includes('tired') ||
+      combinedRecentText.includes('rest') ||
+      combinedRecentText.includes('exhausted')
+    ) {
+      activeTopic = 'tired_workday';
+      previousEntities.place = 'work';
+    } else if (
       combinedRecentText.includes('office') ||
       combinedRecentText.includes('work') ||
       combinedRecentText.includes('meeting') ||
@@ -48,6 +55,16 @@ export class ConversationPipeline {
     ) {
       activeTopic = 'workplace';
       previousEntities.place = 'office';
+    } else if (
+      combinedRecentText.includes('movie') ||
+      combinedRecentText.includes('cinema') ||
+      combinedRecentText.includes('film')
+    ) {
+      activeTopic = 'movies';
+    } else if (
+      combinedRecentText.includes('photosynthesis')
+    ) {
+      activeTopic = 'photosynthesis';
     } else if (
       combinedRecentText.includes('interview') ||
       combinedRecentText.includes('self introduction') ||
@@ -92,11 +109,11 @@ export class ConversationPipeline {
     const detectedLang = detectLanguage(trimmed);
     const context = this.analyzeContext(history);
 
-    // 1. Language preference, permission, and capability questions
+    // 1. Language preference, capability, and permission questions
     const langPermReply = this.handleLanguageCapability(lower, trimmed, detectedLang);
     if (langPermReply) return langPermReply;
 
-    // 2. Clarification, Confusion, and "Don't understand"
+    // 2. Clarification, Confusion, and "Don't understand" (including colloquial Tamil like "daw", "ithu")
     const clarificationReply = this.handleClarificationAndConfusion(lower, trimmed, context, detectedLang);
     if (clarificationReply) return clarificationReply;
 
@@ -115,21 +132,21 @@ export class ConversationPipeline {
       return this.handleExplainInSimpleEnglish(context);
     }
 
-    // 5. Contextual follow-up and pronouns ("He misunderstood me", "What should I do now?", "Why did that happen?")
+    // 5. Contextual follow-up and pronouns ("Why?", "Really?", "He misunderstood me", "What should I do now?", "Yes, too much work")
     const followUpReply = this.handleContextualFollowUp(lower, trimmed, context, detectedLang);
     if (followUpReply) return followUpReply;
 
-    // 6. Direct Questions: Learning timeline, Interview guidance, Grammar explanations
+    // 6. Direct Questions: Name, Photosynthesis, Learning timeline, Interview, Grammar explanations
     const directQuestionReply = this.handleDirectQuestions(lower, trimmed, detectedLang);
     if (directQuestionReply) return directQuestionReply;
 
-    // 7. Everyday Emotional Sharing (bad day, busy work, tired, fear, fight)
-    const emotionReply = this.handleEmotionalSharing(lower, trimmed, detectedLang);
-    if (emotionReply) return emotionReply;
-
-    // 8. Topic change requests (movies, food, specific topic switch)
+    // 7. Topic change requests (movies, food, specific topic switch)
     const topicChangeReply = this.handleTopicChange(lower, detectedLang);
     if (topicChangeReply) return topicChangeReply;
+
+    // 8. Everyday Emotional Sharing (tired, bad day, busy work, fear)
+    const emotionReply = this.handleEmotionalSharing(lower, trimmed, detectedLang);
+    if (emotionReply) return emotionReply;
 
     // 9. General Greetings and Conversation Initiation ("Hi", "Shall we talk?")
     const greetingReply = this.handleGreetingsAndInitiation(lower, detectedLang);
@@ -171,36 +188,53 @@ export class ConversationPipeline {
     rawText: string,
     detectedLang: DetectedLanguage
   ): AIResponsePayload | null {
-    // English phrasing
-    const isEnglishLanguageQuestion =
-      (lower.includes('talk') || lower.includes('speak') || lower.includes('chat') || lower.includes('use')) &&
-      lower.includes('tamil') &&
-      (lower.includes('shall') || lower.includes('can') || lower.includes('may') || lower.includes('i') || lower.includes('we'));
+    // A. User asks if PESU (the AI) can speak/talk Tamil:
+    // "Can you talk Tamil?", "Can you speak Tamil?", "Do you speak Tamil?", "Nee Tamil-la pesuviya?", "Unakku Tamil theriyuma?", "நீ தமிழில் பேசுவாயா?"
+    const isAskingIfAITalksTamil =
+      (lower.includes('you') || lower.includes('u ') || lower.includes('nee') || lower.includes('unakku') || lower.includes('ungalukku') || rawText.includes('நீ') || rawText.includes('உங்களுக்கு')) &&
+      (lower.includes('tamil') || rawText.includes('தமிழ்')) &&
+      (lower.includes('talk') || lower.includes('speak') || lower.includes('pesu') || lower.includes('pesa') || lower.includes('theriyum') || lower.includes('know') || lower.includes('puriyum') || rawText.includes('பேசு'));
 
-    // Shorthand / imperfect grammar: "can talk tamil", "can speak tamil", "tamil ok", "tamil okay", "tamil possible"
-    const isShorthandTamil =
-      lower === 'can talk tamil' ||
-      lower === 'can speak tamil' ||
-      lower === 'can talk in tamil' ||
-      lower === 'i can talk tamil' ||
-      lower === 'i can speak tamil' ||
-      lower === 'tamil can talk' ||
-      lower === 'tamil ok' ||
-      lower === 'tamil okay' ||
-      lower === 'tamil ok va' ||
-      lower === 'tamil okva';
+    if (isAskingIfAITalksTamil) {
+      if (detectedLang === 'tamil' || rawText.includes('தமிழ்')) {
+        return {
+          replyText: `ஆமாம், நிச்சயமாக! என்னால் தமிழில் பேசவும் உரையாடவும் முடியும். நீங்கள் தாராளமாக தமிழில் பேசலாம். இன்று எதைப் பற்றி பேச விரும்புகிறீர்கள்?`,
+          detectedLanguage: 'tamil',
+          tamilExplanation: `என்னால் தமிழில் பேசவும் முழுமையாகப் புரிந்துகொள்ளவும் முடியும்!`,
+          suggestedResponses: [
+            'இன்று எனக்கு மிகவும் களைப்பாக இருக்கிறது.',
+            'திரைப்படங்கள் பற்றி பேசலாமா?',
+            'எனக்கு ஆங்கிலம் பேச தயக்கமாக இருக்கிறது.'
+          ]
+        };
+      }
 
-    // Tanglish phrasing: "naan tamil la pesalama", "tamil-la pesalama", "tamil la pesalaama", "tamil pesalama"
-    const isTanglishTamilQuestion =
-      (lower.includes('tamil') || lower.includes('தமிழ்')) &&
-      (lower.includes('pesalama') ||
-        lower.includes('pesalaama') ||
-        lower.includes('pesalam') ||
-        lower.includes('pesa mudiyuma') ||
-        lower.includes('pesuvoma') ||
-        lower.includes('theriyuma'));
+      if (lower.includes('nee') || lower.includes('unakku') || lower.includes('pesuviya') || lower.includes('pesa mudiyuma')) {
+        return {
+          replyText: `Aama, kandippa! Naan Tamil-la pesuven. Nee enna venumnaalum Tamil-la pesalaam. Enna pathi pesa porom?`,
+          detectedLanguage: 'mixed',
+          tamilExplanation: `ஆமாம், கண்டிப்பாக! எனக்கு தமிழ் நன்றாகப் புரியும், பேசவும் முடியும். நீங்கள் தாராளமாக தமிழில் பேசலாம். எதைப் பற்றி பேசலாம்?`,
+          suggestedResponses: [
+            'Innaiku office-la romba work irundhuchu.',
+            'Enakku English pesa bayama irukku.',
+            'Can we talk about movies?'
+          ]
+        };
+      }
 
-    // Tanglish understanding: "can you understand tanglish?", "tanglish puriyuma", "tanglish theriyuma"
+      return {
+        replyText: `Yes, absolutely! I can speak and understand Tamil, Tanglish, and English. You can speak in Tamil anytime. What would you like to talk about?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `நிச்சயமாக! எனக்கு தமிழ் நன்றாகப் புரியும், பேசவும் முடியும். நீங்கள் தாராளமாக தமிழில் பேசலாம். எதைப் பற்றி பேசலாம்?`,
+        suggestedResponses: [
+          'Innaiku office-la romba work irundhuchu.',
+          'Today I am very tired.',
+          'Can we talk about movies?'
+        ]
+      };
+    }
+
+    // B. Tanglish capability questions: "can you understand tanglish?", "tanglish puriyuma"
     const isTanglishCapability =
       lower.includes('tanglish') &&
       (lower.includes('understand') ||
@@ -209,13 +243,6 @@ export class ConversationPipeline {
         lower.includes('pesalama') ||
         lower.includes('type') ||
         lower.includes('can you'));
-
-    // General understanding check: "naan enna sonnalum unakku puriyudha?"
-    const isGeneralUnderstandingCheck =
-      (lower.includes('puriyudha') && (lower.includes('naan') || lower.includes('enakku'))) ||
-      lower.includes('do you understand me') ||
-      lower.includes('can you understand me') ||
-      lower.includes('puriyudha unakku');
 
     if (isTanglishCapability) {
       return {
@@ -230,6 +257,15 @@ export class ConversationPipeline {
       };
     }
 
+    // C. User asking permission in Tanglish: "naan tamil la pesalama", "tamil-la pesalama"
+    const isTanglishTamilQuestion =
+      (lower.includes('tamil') || lower.includes('தமிழ்')) &&
+      (lower.includes('pesalama') ||
+        lower.includes('pesalaama') ||
+        lower.includes('pesalam') ||
+        lower.includes('pesa mudiyuma') ||
+        lower.includes('pesuvoma'));
+
     if (isTanglishTamilQuestion) {
       return {
         replyText: `Aama, kandippa! Tamil-la comfortable-ah pesalaam. Unakku enna pesa thonudho sollu. We can practise English slowly whenever you're ready!`,
@@ -242,6 +278,19 @@ export class ConversationPipeline {
         ]
       };
     }
+
+    // D. User shorthand / imperfect grammar: "can talk tamil", "can speak tamil", "tamil ok"
+    const isShorthandTamil =
+      lower === 'can talk tamil' ||
+      lower === 'can speak tamil' ||
+      lower === 'can talk in tamil' ||
+      lower === 'i can talk tamil' ||
+      lower === 'i can speak tamil' ||
+      lower === 'tamil can talk' ||
+      lower === 'tamil ok' ||
+      lower === 'tamil okay' ||
+      lower === 'tamil ok va' ||
+      lower === 'tamil okva';
 
     if (isShorthandTamil) {
       return {
@@ -256,6 +305,12 @@ export class ConversationPipeline {
       };
     }
 
+    // E. User asking permission in English: "Shall I talk in Tamil?", "shall i talk tamil", "Can I speak Tamil?"
+    const isEnglishLanguageQuestion =
+      (lower.includes('talk') || lower.includes('speak') || lower.includes('chat') || lower.includes('use')) &&
+      lower.includes('tamil') &&
+      (lower.includes('shall') || lower.includes('can i') || lower.includes('may i') || lower.includes('i '));
+
     if (isEnglishLanguageQuestion) {
       if (lower.includes('can i speak tamil') || lower.includes('can i talk in tamil')) {
         return {
@@ -263,7 +318,7 @@ export class ConversationPipeline {
           detectedLanguage: 'english',
           tamilExplanation: `நிச்சயமாக! நீங்கள் தமிழில் பேசலாம். நாம் மெதுவாக, உங்கள் வசதிக்கேற்ப ஆங்கிலமும் பழகலாம். எதைப் பற்றி பேசலாம்?`,
           suggestedResponses: [
-            'Today I had a bad day.',
+            'Today I am very tired.',
             'Can I improve my English in three months?',
             'How do I introduce myself in an interview?'
           ]
@@ -282,6 +337,13 @@ export class ConversationPipeline {
       };
     }
 
+    // F. General understanding check: "naan enna sonnalum unakku puriyudha?"
+    const isGeneralUnderstandingCheck =
+      (lower.includes('puriyudha') && (lower.includes('naan') || lower.includes('enakku'))) ||
+      lower.includes('do you understand me') ||
+      lower.includes('can you understand me') ||
+      lower.includes('puriyudha unakku');
+
     if (isGeneralUnderstandingCheck) {
       return {
         replyText: `Aama, kandippa puriyudhu! I understand you clearly whether you type or speak in Tamil, Tanglish, or English. You can speak freely without worrying about mistakes. What would you like to talk about today?`,
@@ -299,7 +361,7 @@ export class ConversationPipeline {
   }
 
   // ---------------------------------------------------------------------------
-  // 2. Clarification & Confusion Handler
+  // 2. Clarification & Confusion Handler (Supports "daw", "ithu", "purila")
   // ---------------------------------------------------------------------------
   private handleClarificationAndConfusion(
     lower: string,
@@ -311,9 +373,11 @@ export class ConversationPipeline {
       lower.includes('puriyala') ||
       lower.includes('purila') ||
       lower.includes('enna da solra') ||
-      lower.includes('enna da sollra') ||
+      lower.includes('enna daw solra') ||
       lower.includes('enna solra') ||
       lower.includes('enna solreenga') ||
+      lower.includes('enna da ithu') ||
+      lower.includes('enna daw ithu') ||
       lower.includes('puriyave illa') ||
       lower.includes("didn't understand") ||
       lower.includes("did not understand") ||
@@ -324,17 +388,31 @@ export class ConversationPipeline {
 
     if (!isConfused) return null;
 
+    // Handle "enna daw ithu" / "enna da ithu" (What is this?)
+    if (lower === 'enna daw ithu' || lower === 'enna da ithu' || lower.includes('enna daw ithu') || lower.includes('enna da ithu')) {
+      return {
+        replyText: `Idhu PESU, ungalukku Tamil and English-la practice panna oru friendly partner! Enna purila nu sollunga, simple-ah explain panren.`,
+        detectedLanguage: 'mixed',
+        tamilExplanation: `இது PESU — உங்களுடன் தமிழ் மற்றும் ஆங்கிலத்தில் உரையாட உதவும் தோழன்! எது புரியவில்லை என்று சொல்லுங்கள், எளிய முறையில் விளக்குகிறேன்.`,
+        suggestedResponses: [
+          'Now I understand!',
+          'Can we talk about movies?',
+          'How does this app help me practice English?'
+        ]
+      };
+    }
+
     const lastMsg = context.lastAssistantMessage;
     if (lastMsg) {
-      const explanation = this.buildContextualClarification(lastMsg.content);
+      const explanation = this.buildContextualClarification(lastMsg.content, lower.includes('daw') || lower.includes('da '));
       return {
-        replyText: `Ayyoo, sorry if that was confusing! Let me explain it in simple words:\n\n${explanation.simpleEnglish}`,
+        replyText: explanation.replyText,
         detectedLanguage: 'mixed',
         tamilExplanation: explanation.tamilExplanation,
         suggestedResponses: [
           'Now I understand, thank you!',
-          'Can you ask me a simple question?',
-          'Let me try replying now.'
+          'Let me try replying now.',
+          'Can we practice another sentence?'
         ]
       };
     }
@@ -346,54 +424,59 @@ export class ConversationPipeline {
     };
   }
 
-  private buildContextualClarification(content: string): { simpleEnglish: string; tamilExplanation: string } {
+  private buildContextualClarification(content: string, isCasualSlang: boolean): { replyText: string; simpleEnglish: string; tamilExplanation: string } {
     const lower = content.toLowerCase();
 
-    if (lower.includes('went') && lower.includes('gone')) {
+    if (lower.includes('office') || lower.includes('work') || lower.includes('busy') || lower.includes('tired')) {
+      const prefix = isCasualSlang ? `Sorry daw! Simple-ah solren.` : `Ayyoo, sorry if that was confusing! Let me explain in simple words:`;
       return {
-        simpleEnglish: `'Went' is used alone for the past: "I went to the office."\n'Gone' is always used with has/have: "He has gone to the office."`,
-        tamilExplanation: `'Went' தனியாக கடந்த காலத்திற்கு வரும்: "I went to office" (நான் அலுவலகம் சென்றேன்).\n'Gone' எப்போதும் 'have' அல்லது 'has' உடன் மட்டுமே வரும்: "He has gone".`
+        replyText: `${prefix} Naan un office day eppadi irundhuchu nu ketten. Innaiku office-la enna nadandhuchu?`,
+        simpleEnglish: `I was asking about your workday. How was your day at the office?`,
+        tamilExplanation: `மன்னிக்கவும்! எளிமையாக சொல்கிறேன்: உங்கள் அலுவலக நாள் எப்படி இருந்தது, என்ன வேலை நடந்தது என்று கேட்டேன்.`
+      };
+    }
+
+    if (lower.includes('went') && lower.includes('gone')) {
+      const prefix = isCasualSlang ? `Sorry daw! Simple-ah solren.` : `Ayyoo, sorry if that was confusing! In simple terms:`;
+      return {
+        replyText: `${prefix} 'Went' தனியாக கடந்த காலத்திற்கு வரும்: "I went to office" (நான் அலுவலகம் சென்றேன்). 'Gone' எப்போதும் has/have உடன் மட்டுமே வரும்: "He has gone".`,
+        simpleEnglish: `'Went' is used alone for past: "I went to the office." 'Gone' is always used with has/have: "He has gone to the office."`,
+        tamilExplanation: `'Went' தனியாக கடந்த காலத்திற்கு வரும். 'Gone' எப்போதும் have/has உடன் மட்டுமே வரும்.`
+      };
+    }
+
+    if (lower.includes('movie') || lower.includes('cinema')) {
+      const prefix = isCasualSlang ? `Sorry daw! Simple-ah solren.` : `Ayyoo, let me make it simple:`;
+      return {
+        replyText: `${prefix} Naan unakku pidicha cinema pathi ketten. Which movie have you watched recently?`,
+        simpleEnglish: `I was asking about your favorite movies. Which movie did you watch recently?`,
+        tamilExplanation: `நான் உங்களுக்கு பிடித்த சினிமா பற்றி கேட்டேன்: சமீபத்தில் என்ன படம் பார்த்தீர்கள்?`
       };
     }
 
     if (lower.includes('friend') || lower.includes('misunderstanding') || lower.includes('fight')) {
+      const prefix = isCasualSlang ? `Sorry daw! Simple-ah solren.` : `Let me explain simply:`;
       return {
-        simpleEnglish: `I was saying that misunderstandings with friends happen to everyone. Talking calmly to your friend helps resolve it.`,
+        replyText: `${prefix} Friend kooda sanda vandha konjam calm-ah pesina seriyagidum nu sonnen. What happened?`,
+        simpleEnglish: `I was saying that misunderstandings with friends happen, and talking calmly helps resolve it.`,
         tamilExplanation: `நண்பர்களிடம் ஏற்படும் தவறான புரிதல்கள் இயல்பானவை; சற்று நேரம் கொடுத்து அமைதியாகப் பேசினால் சரியாகிவிடும் என்று சொன்னேன்.`
       };
     }
 
     if (lower.includes('interview') || lower.includes('self-introduction') || lower.includes('name is')) {
+      const prefix = isCasualSlang ? `Sorry daw! Simple-ah solren.` : `Here it is simply:`;
       return {
-        simpleEnglish: `I was explaining how to introduce yourself: Say your name, where you are from, and what your job or degree is.`,
-        tamilExplanation: `சுய அறிமுகம் எப்படி செய்ய வேண்டும் என்று சொன்னேன்: பெயர், ஊர், மற்றும் படிப்பு/வேலை ஆகியவற்றை எளிய ஆங்கிலத்தில் சொல்லுங்கள்.`
+        replyText: `${prefix} Interview-la un name, background, and strength epdi sollanum nu sonnen. Try saying: "My name is [your name]."`,
+        simpleEnglish: `I was explaining how to introduce yourself: Say your name, where you are from, and your role.`,
+        tamilExplanation: `சுய அறிமுகம் எப்படி செய்ய வேண்டும் என்று சொன்னேன்: பெயர், ஊர், மற்றும் படிப்பு/வேலை ஆகியவற்றை சொல்லுங்கள்.`
       };
     }
 
-    if (lower.includes('three months') || lower.includes('fluency') || lower.includes('improve')) {
-      return {
-        simpleEnglish: `I meant that 3 months of daily speaking practice will make you confident and fluent in daily conversations.`,
-        tamilExplanation: `தினமும் பேசிப் பழகினால் 3 மாதங்களில் தன்னம்பிக்கையுடன் எளிய ஆங்கிலம் பேச முடியும் என்று குறிப்பிட்டேன்.`
-      };
-    }
-
-    if (lower.includes('office') || lower.includes('work') || lower.includes('busy') || lower.includes('hectic')) {
-      return {
-        simpleEnglish: `I asked about your workday. What tasks kept you so busy at the office today?`,
-        tamilExplanation: `இன்று அலுவலகத்தில் என்னென்ன வேலைகள் உங்களை பிஸியாக வைத்திருந்தன என்று கேட்டேன்.`
-      };
-    }
-
-    if (lower.includes('tamil') || lower.includes('tanglish') || lower.includes('comfortable')) {
-      return {
-        simpleEnglish: `I said that you are completely free to speak in Tamil, Tanglish, or English — whichever you prefer!`,
-        tamilExplanation: `நீங்கள் தமிழ், Tanglish அல்லது ஆங்கிலம் என உங்களுக்கு விருப்பமான மொழியில் தாராளமாகப் பேசலாம் என்று சொன்னேன்.`
-      };
-    }
-
+    const prefix = isCasualSlang ? `Sorry daw! Simple-ah solren.` : `Ayyoo, sorry if that was confusing!`;
     return {
-      simpleEnglish: `In simple terms: English speaking is easy when we practice step by step without worrying about mistakes. What is on your mind?`,
-      tamilExplanation: `சுருக்கமாக: தவறுகளைப் பற்றி கவலைப்படாமல் மெதுவாக பேசிப் பழகினால் ஆங்கிலம் எளிதாக வரும். இப்போது என்ன பேசலாம்?`
+      replyText: `${prefix} Namma casual-ah pesi English practice pannalam nu sonnen. What would you like to talk about?`,
+      simpleEnglish: `I was saying we can chat casually and practice step by step without worrying about mistakes.`,
+      tamilExplanation: `சுருக்கமாக: தவறுகளைப் பற்றி கவலைப்படாமல் மெதுவாக பேசிப் பழகலாம் என்று குறிப்பிட்டேன்.`
     };
   }
 
@@ -403,7 +486,7 @@ export class ConversationPipeline {
   private handleExplainInTamil(context: ConversationContext, detectedLang: DetectedLanguage): AIResponsePayload {
     const lastMsg = context.lastAssistantMessage;
     if (lastMsg) {
-      const explanation = this.buildContextualClarification(lastMsg.content);
+      const explanation = this.buildContextualClarification(lastMsg.content, false);
       return {
         replyText: `Kandippa! Here is the explanation in Tamil for what I just said:\n\n👉 ${explanation.tamilExplanation}\n\nShall we continue? Take your time!`,
         detectedLanguage: 'tamil',
@@ -429,7 +512,7 @@ export class ConversationPipeline {
   private handleExplainInSimpleEnglish(context: ConversationContext): AIResponsePayload {
     const lastMsg = context.lastAssistantMessage;
     if (lastMsg) {
-      const explanation = this.buildContextualClarification(lastMsg.content);
+      const explanation = this.buildContextualClarification(lastMsg.content, false);
       return {
         replyText: `Here it is in very simple English:\n\n👉 "${explanation.simpleEnglish}"\n\nTake your time. How would you like to answer this in your own words?`,
         detectedLanguage: 'english',
@@ -450,7 +533,7 @@ export class ConversationPipeline {
   }
 
   // ---------------------------------------------------------------------------
-  // 5. Contextual Follow-up & Pronoun Handler
+  // 5. Contextual Follow-up, Pronouns & Anaphora ("Why?", "Yes, too much work")
   // ---------------------------------------------------------------------------
   private handleContextualFollowUp(
     lower: string,
@@ -458,7 +541,99 @@ export class ConversationPipeline {
     context: ConversationContext,
     detectedLang: DetectedLanguage
   ): AIResponsePayload | null {
-    // A. "He misunderstood me" / "She misunderstood me"
+    const lastMsgText = context.lastAssistantMessage?.content.toLowerCase() || '';
+
+    // A. "Yes, too much work" / "too much work" / "romba work"
+    if (
+      (lower.includes('too much work') || lower.includes('lot of work') || lower.includes('busy work') || lower === 'yes' || lower.startsWith('yes,') || lower.startsWith('yeah')) &&
+      (lastMsgText.includes('was work busy') || lastMsgText.includes('long day') || lastMsgText.includes('tiring day') || context.activeTopic === 'tired_workday')
+    ) {
+      return {
+        replyText: `I get that! A busy workday can be exhausting. What kept you busy today?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `அலுவலகத்தில் அதிக வேலை இருந்ததை ஆங்கிலத்தில்: "I had a lot of work at the office today" அல்லது "It was a hectic day at work" என்று கூறலாம்.`,
+        suggestedResponses: [
+          'I had back-to-back meetings.',
+          'I was fixing urgent bugs.',
+          'Now I am finally relaxing.'
+        ]
+      };
+    }
+
+    // B. "Why?" / "Why so?" / "Why did that happen?"
+    if (
+      lower === 'why' ||
+      lower === 'why?' ||
+      lower === 'why so?' ||
+      lower.startsWith('why ') ||
+      lower === 'yen' ||
+      lower === 'yean' ||
+      lower === 'edhukku'
+    ) {
+      if (lastMsgText.includes('went') || lastMsgText.includes('gone') || lastMsgText.includes('past')) {
+        return {
+          replyText: `Because 'went' is the simple past form of 'go'. Whenever an action already happened in the past (like yesterday), English uses the past tense without helper verbs!`,
+          detectedLanguage: 'english',
+          tamilExplanation: `காரணம்: 'went' என்பது 'go'-வின் கடந்த கால வடிவம். நேற்று நடந்த விஷயங்களை விவரிக்கும்போது 'went' தான் பயன்படுத்த வேண்டும்.`,
+          suggestedResponses: [
+            'Give me another example.',
+            'What about other verbs like eat and ate?',
+            'Got it, thank you!'
+          ]
+        };
+      }
+
+      if (lastMsgText.includes('rest') || lastMsgText.includes('tired') || lastMsgText.includes('exhausting')) {
+        return {
+          replyText: `Because taking a proper rest helps your brain and body recharge! Working continuously without breaks leads to burnout. Did you have dinner yet?`,
+          detectedLanguage: 'english',
+          tamilExplanation: `ஏனெனில் நல்ல ஓய்வு உங்கள் உடலையும் மனதையும் புத்துணர்ச்சியாக்கும். இரவு உணவு சாப்பிட்டீர்களா?`,
+          suggestedResponses: [
+            'Yes, I had dinner.',
+            'Not yet, going to eat now.',
+            'I will rest soon.'
+          ]
+        };
+      }
+
+      if (lastMsgText.includes('misunderstanding') || lastMsgText.includes('friend')) {
+        return {
+          replyText: `Because miscommunications often happen when people react quickly before understanding the full situation. A calm, direct conversation usually clears up the confusion.`,
+          detectedLanguage: 'english',
+          tamilExplanation: `காரணம்: அவசரமாக எதிர்வினையாற்றுவதால் பல தவறான புரிதல்கள் ஏற்படுகின்றன. அமைதியாகப் பேசினால் தீர்வு கிடைக்கும்.`,
+          suggestedResponses: [
+            'That makes sense.',
+            'What should I say to him?',
+            'I will talk to him tomorrow.'
+          ]
+        };
+      }
+
+      if (lastMsgText.includes('photosynthesis') || lastMsgText.includes('oxygen')) {
+        return {
+          replyText: `Because plants need energy to grow! Sunlight powers the chemical reaction that converts water and carbon dioxide into glucose, which is their food.`,
+          detectedLanguage: 'english',
+          tamilExplanation: `தாவரங்கள் வளர்வதற்கு ஆற்றல் தேவைப்படுவதால், சூரிய ஒளியைப் பயன்படுத்தி உணவு தயாரிக்கின்றன.`
+        };
+      }
+
+      return {
+        replyText: `That's a thoughtful question! Asking 'why' helps us understand the situation more deeply. What do you think is the reason?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `நல்ல கேள்வி! 'ஏன்' என்று யோசிப்பது விஷயங்களை ஆழமாகப் புரிந்துகொள்ள உதவும்.`
+      };
+    }
+
+    // C. "Really?" / "Really!" / "Appadiya"
+    if (lower === 'really' || lower === 'really?' || lower === 'appadiya' || lower === 'apdiya') {
+      return {
+        replyText: `Yes, really! It might sound surprising at first, but it is true. What part surprises you the most?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `ஆம், உண்மையில்! உங்களுக்கு இதில் எது மிகவும் ஆச்சரியமாக இருக்கிறது?`
+      };
+    }
+
+    // D. "He misunderstood me" / "She misunderstood me"
     if (
       (lower.includes('misunderstood') || lower.includes('misunderstand') || lower.includes('purinjukala') || lower.includes('thappa purinjikitanga')) &&
       (lower.includes('he') || lower.includes('she') || lower.includes('they') || context.activeTopic === 'friend_conflict')
@@ -477,7 +652,7 @@ export class ConversationPipeline {
       };
     }
 
-    // B. "What should I do now?" / "What can I do?"
+    // E. "What should I do now?" / "What can I do?"
     if (
       lower.includes('what should i do') ||
       lower.includes('what can i do') ||
@@ -499,7 +674,7 @@ export class ConversationPipeline {
         };
       }
 
-      if (context.activeTopic === 'workplace') {
+      if (context.activeTopic === 'workplace' || context.activeTopic === 'tired_workday') {
         return {
           replyText: `Since you had a heavy workday, step away from your screen, drink some water, and have a good meal. A good night's sleep will recharge you for tomorrow! Would you like to practice a short English sentence before you rest?`,
           detectedLanguage: 'english',
@@ -536,14 +711,51 @@ export class ConversationPipeline {
   }
 
   // ---------------------------------------------------------------------------
-  // 6. Direct Questions Handler (Grammar, Learning, Interview, Practical)
+  // 6. Direct Questions Handler (Name, Photosynthesis, Learning, Interview, Grammar)
   // ---------------------------------------------------------------------------
   private handleDirectQuestions(
     lower: string,
     rawText: string,
     detectedLang: DetectedLanguage
   ): AIResponsePayload | null {
-    // A. "Can I improve my English in three months?"
+    // A. "What is your name?" / "Who are you?" / "unakku peru enna"
+    if (
+      lower.includes('your name') ||
+      lower.includes("what's your name") ||
+      lower.includes('whats your name') ||
+      lower.includes('who are you') ||
+      lower.includes('who are u') ||
+      lower.includes('unakku peru enna') ||
+      lower.includes('un peyar enna') ||
+      lower.includes('unga name enna')
+    ) {
+      return {
+        replyText: `I'm PESU, your Tamil and English speaking partner! What should I call you?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `என் பெயர் PESU! நான் உங்களுடன் தமிழ் மற்றும் ஆங்கிலத்தில் உரையாட உதவும் தோழன். நான் உங்களை எப்படி அழைக்கலாம்?`,
+        suggestedResponses: [
+          'My name is Karthik.',
+          'You can call me Priya.',
+          'Nice to meet you, PESU!'
+        ]
+      };
+    }
+
+    // B. "Can you explain photosynthesis?"
+    if (lower.includes('photosynthesis')) {
+      return {
+        replyText: `Photosynthesis is the process plants use to make their own food! Plants absorb sunlight, water from the soil, and carbon dioxide from the air. Using sunlight's energy, they produce glucose (sugar) for food, and release fresh oxygen into the air for us to breathe.\n\n💡 Simple equation: Sunlight + Water + Carbon Dioxide ➔ Glucose + Oxygen.`,
+        detectedLanguage: 'english',
+        tamilExplanation: `ஒளிச்சேர்க்கை (Photosynthesis) என்பது தாவரங்கள் சூரிய ஒளி, நீர் மற்றும் கார்பன் டை ஆக்சைடைப் பயன்படுத்தி தனக்கான உணவைத் தயாரித்து, நமக்குத் தேவையான ஆக்ஸிஜனை வெளியிடும் இயற்கை நிகழ்வாகும்.`,
+        suggestedResponses: [
+          'Why do plants release oxygen?',
+          'What happens at night without sunlight?',
+          'That was very clearly explained!'
+        ]
+      };
+    }
+
+    // C. "Can I improve my English in three months?"
     if (
       (lower.includes('three months') || lower.includes('3 months')) &&
       (lower.includes('improve') || lower.includes('learn') || lower.includes('fluent') || lower.includes('speak'))
@@ -560,7 +772,7 @@ export class ConversationPipeline {
       };
     }
 
-    // B. "How do I introduce myself in an interview?"
+    // D. "How do I introduce myself in an interview?"
     if (
       lower.includes('self introduction') ||
       (lower.includes('interview') && (lower.includes('introduce') || lower.includes('intro') || lower.includes('sollanum') || lower.includes('epdi'))) ||
@@ -580,7 +792,7 @@ export class ConversationPipeline {
       };
     }
 
-    // C. "What is the difference between 'went' and 'gone'?"
+    // E. "What is the difference between 'went' and 'gone'?"
     if (
       (lower.includes('difference') || lower.includes('vs') || lower.includes('when to use')) &&
       lower.includes('went') &&
@@ -598,7 +810,7 @@ export class ConversationPipeline {
       };
     }
 
-    // D. "Difference between see and watch"
+    // F. "Difference between see and watch"
     if (
       (lower.includes('difference') || lower.includes('vs')) &&
       lower.includes('see') &&
@@ -616,7 +828,7 @@ export class ConversationPipeline {
       };
     }
 
-    // E. "Difference between hear and listen"
+    // G. "Difference between hear and listen"
     if (
       (lower.includes('difference') || lower.includes('vs')) &&
       lower.includes('hear') &&
@@ -634,7 +846,7 @@ export class ConversationPipeline {
       };
     }
 
-    // F. "Difference between say and tell"
+    // H. "Difference between say and tell"
     if (
       (lower.includes('difference') || lower.includes('vs')) &&
       lower.includes('say') &&
@@ -652,7 +864,7 @@ export class ConversationPipeline {
       };
     }
 
-    // G. Professional leave request
+    // I. Professional leave request
     if (lower.includes('leave request') || lower.includes('ask for leave') || lower.includes('leave letter') || lower.includes('apply leave')) {
       return {
         replyText: `Here is a polite, professional way to ask for leave:\n\n"Dear [Manager's Name],\nI would like to request casual leave for 2 days on [Dates] due to personal reasons. I will ensure all pending deliverables are completed or handed over before taking leave.\nThank you,\n[Your Name]"\n\nWould you like a shorter version for Slack or WhatsApp?`,
@@ -670,128 +882,14 @@ export class ConversationPipeline {
   }
 
   // ---------------------------------------------------------------------------
-  // 7. Emotional Sharing Handler (Bad Day, Tired, Busy, Fight)
-  // ---------------------------------------------------------------------------
-  private handleEmotionalSharing(
-    lower: string,
-    rawText: string,
-    detectedLang: DetectedLanguage
-  ): AIResponsePayload | null {
-    // A. "Today I had a bad day."
-    if (
-      lower.includes('bad day') ||
-      lower.includes('terrible day') ||
-      lower.includes('rough day') ||
-      lower.includes('horrible day') ||
-      lower.includes('sad day') ||
-      lower.includes('boring day')
-    ) {
-      return {
-        replyText: `Oh, I'm sorry to hear that. What happened today? If you'd like to share, I am here to listen.`,
-        detectedLanguage: 'english',
-        tamilExplanation: `இன்று உங்கள் நாள் கடினமாக இருந்ததைக் கேட்டு வருந்துகிறேன். என்ன நடந்தது? நீங்கள் பகிர விரும்பினால் நான் கேட்கத் தயார்.`,
-        suggestedResponses: [
-          'I had a fight with my friend.',
-          'There was too much stress at work.',
-          'Nothing went as planned today.'
-        ]
-      };
-    }
-
-    // B. "I had a fight with my friend."
-    if (
-      (lower.includes('fight') || lower.includes('argument') || lower.includes('disagreement') || lower.includes('sanda')) &&
-      (lower.includes('friend') || lower.includes('colleague') || lower.includes('roommate') || lower.includes('family'))
-    ) {
-      const person = lower.includes('colleague') ? 'colleague' : 'friend';
-      return {
-        replyText: `Oh, I am really sorry to hear that. Disagreements with a ${person} can be so stressful. What happened between the two of you?`,
-        detectedLanguage: 'english',
-        tamilExplanation: `நண்பருடன் சண்டை ஏற்பட்டதைக் கேட்டு வருந்துகிறேன். உங்கள் இருவருக்கும் இடையே என்ன நடந்தது?`,
-        suggestedResponses: [
-          'He misunderstood me.',
-          'She got upset over a small thing.',
-          'We had different opinions on something.'
-        ]
-      };
-    }
-
-    // C. "Innaiku office-la romba work irundhuchu."
-    if (
-      (lower.includes('office') || lower.includes('work')) &&
-      (lower.includes('romba work') ||
-        lower.includes('irundhuchu') ||
-        lower.includes('busy') ||
-        lower.includes('hectic') ||
-        lower.includes('packed') ||
-        lower.includes('heavy work') ||
-        lower.includes('lot of work'))
-    ) {
-      return {
-        replyText: `Ayyoo, sounds like you had a busy day at the office! What kept you so busy?`,
-        detectedLanguage: 'english',
-        tamilExplanation: `அலுவலகத்தில் அதிக வேலை இருந்ததை ஆங்கிலத்தில்: "I had a lot of work at the office today" அல்லது "It was a hectic day at work" என்று கூறலாம்.`,
-        suggestedResponses: [
-          'I had back-to-back meetings today.',
-          'I was fixing urgent bugs.',
-          'Now I am finally relaxed.'
-        ]
-      };
-    }
-
-    // D. "I am feeling tired."
-    if (
-      lower.includes('tired') ||
-      lower.includes('exhausted') ||
-      lower.includes('feeling sleepy') ||
-      lower.includes('romba tired') ||
-      lower.includes('tired ah irukku')
-    ) {
-      return {
-        replyText: `Sounds like you've had a tiring day. Did you get enough rest? Make sure to take it easy tonight.`,
-        detectedLanguage: 'english',
-        tamilExplanation: `களைப்பாக உணர்கிறீர்களா? போதிய ஓய்வு எடுங்கள். இன்று இரவு நன்றாக ஓய்வெடுப்பது நல்லது.`,
-        suggestedResponses: [
-          'Yes, I will go to sleep soon.',
-          'I still have some pending work.',
-          'Let us chat for 5 minutes before I sleep.'
-        ]
-      };
-    }
-
-    // E. Hesitation / Fear of speaking English
-    if (
-      lower.includes('bayama') ||
-      lower.includes('thayakkama') ||
-      lower.includes('fear') ||
-      lower.includes('nervous') ||
-      lower.includes('hesitat') ||
-      lower.includes('scared')
-    ) {
-      return {
-        replyText: `Bayapadathinga! That hesitation is completely natural for anyone learning a new language. You are in a safe, judgment-free space with me.\n\nLet's take a small, easy step together right now. Repeat after me out loud:\n👉 "Hello! I am learning to speak in English."\n\nDid you have coffee or tea this morning?`,
-        detectedLanguage: detectedLang,
-        tamilExplanation: `பயப்படாதீர்கள்! ஆரம்பத்தில் தயக்கம் இருப்பது முற்றிலும் இயல்பானது. சிறு சிறு வாக்கியங்களாக தொடங்குவோம். "Hello! I am learning to speak in English" என்று சொல்லிப் பாருங்கள்!`,
-        suggestedResponses: [
-          'Hello! I am learning to speak in English.',
-          'I had coffee this morning.',
-          'Teach me one more easy sentence.'
-        ]
-      };
-    }
-
-    return null;
-  }
-
-  // ---------------------------------------------------------------------------
-  // 8. Topic Change Handler
+  // 7. Topic Change Handler (Movies, Food, etc.)
   // ---------------------------------------------------------------------------
   private handleTopicChange(lower: string, detectedLang: DetectedLanguage): AIResponsePayload | null {
     if (lower.includes('movie') || lower.includes('cinema') || lower.includes('padam') || lower.includes('film')) {
       return {
-        replyText: `Movies are always fun to talk about! What was the last movie you watched, and did you like it?`,
+        replyText: `Absolutely! I love a good movie conversation. Which movie have you watched recently?`,
         detectedLanguage: 'english',
-        tamilExplanation: `திரைப்படங்கள் பற்றி பேசுவது எப்போதும் சுவாரஸ்யமானது! நீங்கள் கடைசியாக பார்த்த படம் எது? அது உங்களுக்கு பிடித்திருந்ததா?`,
+        tamilExplanation: `நிச்சயமாக! திரைப்படங்கள் பற்றி பேசுவதில் எனக்கு மிகவும் ஆர்வம். நீங்கள் சமீபத்தில் பார்த்த படம் எது?`,
         suggestedResponses: [
           'I watched a Tamil comedy movie.',
           'I watched an exciting thriller.',
@@ -836,9 +934,149 @@ export class ConversationPipeline {
   }
 
   // ---------------------------------------------------------------------------
+  // 8. Emotional Sharing Handler (Tiredness, Workday, Bad Day, Fear)
+  // ---------------------------------------------------------------------------
+  private handleEmotionalSharing(
+    lower: string,
+    rawText: string,
+    detectedLang: DetectedLanguage
+  ): AIResponsePayload | null {
+    // A. "Today I am very tired" / "feeling tired" / "very tired"
+    if (
+      lower.includes('tired') ||
+      lower.includes('exhausted') ||
+      lower.includes('feeling sleepy') ||
+      lower.includes('romba tired') ||
+      lower.includes('tired ah irukku')
+    ) {
+      return {
+        replyText: `Oh no! Sounds like you've had a long day. Was work busy today?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `அச்சச்சோ! இன்று உங்களுக்கு நீண்ட, களைப்பான நாளாக இருந்திருக்கிறது போலிருக்கிறது. அலுவலகத்தில் வேலை அதிகமாக இருந்ததா?`,
+        suggestedResponses: [
+          'Yes, too much work.',
+          'Yes, had back-to-back meetings.',
+          'No, just didn\'t get enough sleep.'
+        ]
+      };
+    }
+
+    // B. Tanglish Workday updates ("Nethu office la romba work irundhuchu", "Innaiku office-la romba work")
+    if (
+      (lower.includes('office') || lower.includes('work')) &&
+      (lower.includes('romba work') ||
+        lower.includes('irundhuchu') ||
+        lower.includes('heavy work') ||
+        lower.includes('lot of work') ||
+        lower.includes('busy') ||
+        lower.includes('hectic'))
+    ) {
+      if (lower.includes('nethu') || lower.includes('yesterday')) {
+        return {
+          replyText: `Aiyyo, romba busy-ah irundhirukku pola! What kind of work did you have yesterday?\n\n💡 You can also say: 'I had a lot of work at the office yesterday.'`,
+          detectedLanguage: 'mixed',
+          tamilExplanation: `நேற்று அலுவலகத்தில் வேலை பளு அதிகம் இருந்ததை ஆங்கிலத்தில்: "I had a lot of work at the office yesterday" என்று சொல்லலாம்.`,
+          suggestedResponses: [
+            'I had client presentations.',
+            'I was fixing urgent bugs.',
+            'Now I am finally relaxed.'
+          ]
+        };
+      }
+
+      return {
+        replyText: `Ayyoo, sounds like you had a busy day at the office! What kept you so busy?\n\n💡 You can also say: 'I had a lot of work at the office today.'`,
+        detectedLanguage: 'english',
+        tamilExplanation: `அலுவலகத்தில் அதிக வேலை இருந்ததை ஆங்கிலத்தில்: "I had a lot of work at the office today" அல்லது "It was a hectic day at work" என்று கூறலாம்.`,
+        suggestedResponses: [
+          'I had back-to-back meetings today.',
+          'I was fixing urgent bugs.',
+          'Now I am finally relaxed.'
+        ]
+      };
+    }
+
+    // C. "Today I had a bad day."
+    if (
+      lower.includes('bad day') ||
+      lower.includes('terrible day') ||
+      lower.includes('rough day') ||
+      lower.includes('horrible day') ||
+      lower.includes('sad day') ||
+      lower.includes('boring day')
+    ) {
+      return {
+        replyText: `Oh, I'm sorry to hear that. What happened today? If you'd like to share, I am here to listen.`,
+        detectedLanguage: 'english',
+        tamilExplanation: `இன்று உங்கள் நாள் கடினமாக இருந்ததைக் கேட்டு வருந்துகிறேன். என்ன நடந்தது? நீங்கள் பகிர விரும்பினால் நான் கேட்கத் தயார்.`,
+        suggestedResponses: [
+          'I had a fight with my friend.',
+          'There was too much stress at work.',
+          'Nothing went as planned today.'
+        ]
+      };
+    }
+
+    // D. "I had a fight with my friend."
+    if (
+      (lower.includes('fight') || lower.includes('argument') || lower.includes('disagreement') || lower.includes('sanda')) &&
+      (lower.includes('friend') || lower.includes('colleague') || lower.includes('roommate') || lower.includes('family'))
+    ) {
+      const person = lower.includes('colleague') ? 'colleague' : 'friend';
+      return {
+        replyText: `Oh, I am really sorry to hear that. Disagreements with a ${person} can be so stressful. What happened between the two of you?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `நண்பருடன் சண்டை ஏற்பட்டதைக் கேட்டு வருந்துகிறேன். உங்கள் இருவருக்கும் இடையே என்ன நடந்தது?`,
+        suggestedResponses: [
+          'He misunderstood me.',
+          'She got upset over a small thing.',
+          'We had different opinions on something.'
+        ]
+      };
+    }
+
+    // E. Hesitation / Fear of speaking English ("Enakku English pesa bayama irukku")
+    if (
+      lower.includes('bayama') ||
+      lower.includes('thayakkama') ||
+      lower.includes('fear') ||
+      lower.includes('nervous') ||
+      lower.includes('hesitat') ||
+      lower.includes('scared')
+    ) {
+      return {
+        replyText: `Puriyudhu! English pesumbodhu bayam varradhu normal dhaan. Namma casual-ah pesi practice pannalaam. Innaiku un day eppadi pochu?`,
+        detectedLanguage: detectedLang,
+        tamilExplanation: `புரிகிறது! ஆங்கிலம் பேசும்போது பயம் மற்றும் தயக்கம் வருவது மிகவும் இயல்பானது. நாம் நிதானமாகப் பேசிப் பழகுவோம். இன்று உங்கள் நாள் எப்படி போனது?`,
+        suggestedResponses: [
+          'Innaiku office-la romba work irundhuchu.',
+          'Today I had a good day.',
+          'Teach me one easy English sentence.'
+        ]
+      };
+    }
+
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
   // 9. Greetings & Initiation Handler ("Hi", "Shall we talk?")
   // ---------------------------------------------------------------------------
   private handleGreetingsAndInitiation(lower: string, detectedLang: DetectedLanguage): AIResponsePayload | null {
+    // Short casual "Hi" / "Hello" / "Hey"
+    if (lower === 'hi' || lower === 'hello' || lower === 'hey' || lower === 'hi there') {
+      return {
+        replyText: `Hey! How's it going? What's on your mind today?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `வணக்கம்! இன்று எப்படி போகிறது? எதைப் பற்றி பேசலாம்?`,
+        suggestedResponses: [
+          'Today I am very tired.',
+          'Shall we talk about movies?',
+          'Can I speak Tamil?'
+        ]
+      };
+    }
+
     // "Shall we talk?" / "Can we talk?" / "Let's talk" (general)
     if (
       (lower.includes('shall we talk') ||
@@ -858,15 +1096,15 @@ export class ConversationPipeline {
         detectedLanguage: 'english',
         tamilExplanation: `கண்டிப்பாக பேசலாம்! இன்று எதைப் பற்றி பேசலாம்? உங்கள் நாள் பற்றியோ, அலுவலக ஆங்கிலமோ அல்லது பிடித்த தலைப்பிலோ பேசலாம்.`,
         suggestedResponses: [
-          'Today I had a bad day.',
-          'Innaiku office-la romba work irundhuchu.',
+          'Today I am very tired.',
+          'Nethu office la romba work irundhuchu.',
           'Can I improve my English in three months?'
         ]
       };
     }
 
-    // Casual greetings: "hi", "hello", "vanakkam"
-    const greetings = ['hi', 'hello', 'hey', 'vanakkam', 'வணக்கம்', 'good morning', 'good afternoon', 'good evening', 'hi there'];
+    // General greetings with name or time of day
+    const greetings = ['vanakkam', 'வணக்கம்', 'good morning', 'good afternoon', 'good evening'];
     const isGreetingMatch = greetings.some(g => lower === g || lower.startsWith(`${g} `) || lower.startsWith(`${g},`) || lower.startsWith(`${g}!`));
 
     if (isGreetingMatch) {
@@ -899,7 +1137,7 @@ export class ConversationPipeline {
     // Specific conversational response tailored to what the user was trying to say:
     let naturalAcknowledgement = `I see what you mean!`;
     if (lower.includes('yesterday') && (lower.includes('office') || lower.includes('work'))) {
-      naturalAcknowledgement = `I see! You're talking about going to the office yesterday. How was your day there?`;
+      naturalAcknowledgement = `Oh, you went to the office yesterday! How was your day there?`;
     } else if (lower.includes('office') || lower.includes('work')) {
       naturalAcknowledgement = `Sounds like you were heading to work! How did things go?`;
     } else if (lower.includes('friend')) {
@@ -984,7 +1222,7 @@ export class ConversationPipeline {
   }
 
   // ---------------------------------------------------------------------------
-  // 12. Smart Fallback (No repetitive generic replies!)
+  // 12. Smart, Honest Fallback (Never a repetitive generic template!)
   // ---------------------------------------------------------------------------
   private generateSmartFallback(
     text: string,
@@ -1029,29 +1267,29 @@ export class ConversationPipeline {
       };
     }
 
-    if (lower.includes('learn') || lower.includes('practice') || lower.includes('fluent') || lower.includes('english')) {
+    // If user asked a complex knowledge question in offline mode
+    if (lower.startsWith('can you explain') || lower.startsWith('what is') || lower.startsWith('how does') || lower.includes('explain')) {
       return {
-        replyText: `Practicing regular conversation is the best way to get fluent. What kind of English situations do you want to master first — office meetings, casual chats, or job interviews?`,
-        detectedLanguage: detectedLang,
-        tamilExplanation: `தொடர்ந்து பேசுவதே சரளமாகப் பேச சிறந்த வழி. அலுவலக உரையாடலா அல்லது நேர்காணல் பயிற்சியா — எதில் கவனம் செலுத்த விரும்புகிறீர்கள்?`,
+        replyText: `In offline mode, I focus on spoken English practice and everyday chats. For detailed explanations on technical and general knowledge topics, you can switch to Gemini AI in Settings! What everyday topic would you like to chat about?`,
+        detectedLanguage: 'english',
+        tamilExplanation: `ஆஃப்லைன் முறையில் அன்றாட ஆங்கிலப் பேச்சுப் பயிற்சிக்கு முன்னுரிமை அளிக்கிறேன். அறிவியல் மற்றும் தொழில்நுட்ப விளக்கங்களை அறிய Settings-ல் Gemini AI-யை இயக்கலாம்!`,
         suggestedResponses: [
-          'I want to speak confidently in office meetings.',
-          'I want to clear job interviews.',
-          'I want to chat casually with friends.'
+          'Let us talk about daily office conversations.',
+          'Can we practice an interview self-introduction?',
+          'Tell me about your favorite movies.'
         ]
       };
     }
 
-    // Dynamic acknowledgment of the user's sentence without canned repetition
-    const words = text.split(/\s+/).slice(0, 5).join(' ');
+    // Honest clarifying question when intent is not clear — NO robotic coaching templates!
     return {
-      replyText: `That is interesting! You mentioned "${words}...". Could you tell me a little more about that in your own words?`,
+      replyText: `I didn't quite catch that. Could you tell me a little more, or rephrase that in simple English or Tamil so I can understand you better?`,
       detectedLanguage: detectedLang,
-      tamilExplanation: `நீங்கள் குறிப்பிட்டதைப் பற்றி இன்னும் கொஞ்சம் விவரியுங்கள்!`,
+      tamilExplanation: `நீங்கள் சொன்னது எனக்கு முழுமையாகப் புரியவில்லை. நான் தெளிவாகப் புரிந்துகொள்ள சற்று எளிய தமிழில் அல்லது ஆங்கிலத்தில் மீண்டும் சொல்ல முடியுமா?`,
       suggestedResponses: [
-        'Let me explain what happened.',
-        'Can you show me how to say this better in English?',
-        'Let us switch to another topic.'
+        'Let me rephrase that.',
+        'Shall we talk about movies?',
+        'Can I speak Tamil?'
       ]
     };
   }

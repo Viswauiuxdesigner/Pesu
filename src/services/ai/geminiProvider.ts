@@ -115,7 +115,7 @@ export class GeminiSpeakingProvider implements AIConversationProvider {
       ...formattedHistory,
       {
         role: 'user',
-        parts: [{ text: `User message: "${userText}". Current practice scenario: ${options?.scenarioId || 'General'}. Respond according to the system rules and return JSON only.` }]
+        parts: [{ text: `User message: "${userText}". Detected input language: ${detectLanguage(userText)}. Interface language: ${options?.interfaceLanguage || 'en'}. Current practice scenario: ${options?.scenarioId || 'General'}. Respond according to the system rules and return JSON only.` }]
       }
     ];
 
@@ -175,7 +175,9 @@ export class GeminiSpeakingProvider implements AIConversationProvider {
       body: JSON.stringify({
         message: userText,
         history: priorHistory.slice(-6),
-        scenarioId: options?.scenarioId
+        scenarioId: options?.scenarioId,
+        interfaceLanguage: options?.interfaceLanguage || 'en',
+        detectedLanguage: options?.detectedLanguage || detectLanguage(userText)
       })
     });
 
