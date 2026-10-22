@@ -55,27 +55,20 @@ export class GeminiSpeakingProvider implements AIConversationProvider {
     history: Message[],
     options?: ConversationOptions
   ): Promise<AIResponsePayload> {
-    // If no API key and not using serverless, fallback to local provider immediately
-    if (!this.apiKey && !this.useServerless) {
+    try {
+      if (this.apiKey) {
+        // Direct client API key if explicitly provided in Settings
+        return await this.callGeminiDirect(userText, history, options);
+      } else {
+        // Deployed mode: Automatically use secure serverless /api/chat proxy
+        return await this.callServerlessEndpoint(userText, history, options);
+      }
+    } catch (err: any) {
+      console.warn('Gemini request failed (proxy unavailable, key not configured, or quota exceeded). Falling back to PESU offline engine.', err);
       const fallback = await this.fallbackProvider.sendMessage(userText, history, options);
       return {
         ...fallback,
         replyText: fallback.replyText
-      };
-    }
-
-    try {
-      if (this.useServerless) {
-        return await this.callServerlessEndpoint(userText, history, options);
-      } else {
-        return await this.callGeminiDirect(userText, history, options);
-      }
-    } catch (err: any) {
-      console.warn('Gemini API call failed or quota exceeded. Falling back to local offline engine.', err);
-      const fallback = await this.fallbackProvider.sendMessage(userText, history, options);
-      return {
-        ...fallback,
-        replyText: `[Note: Gemini rate limit reached or offline. Switched to offline tutor]\n\n${fallback.replyText}`
       };
     }
   }
@@ -163,7 +156,14 @@ export class GeminiSpeakingProvider implements AIConversationProvider {
     }
 
     const data = await response.json();
-    return data;
+    return {
+      replyText: data.replyText || 'I am listening! Great attempt.',
+      detectedLanguage: data.detectedLanguage || detectLanguage(userText),
+      tamilExplanation: data.tamilExplanation,
+      grammarCorrection: data.grammarCorrection?.original ? data.grammarCorrection : undefined,
+      pronunciationGuide: data.pronunciationGuide,
+      suggestedResponses: data.suggestedResponses || []
+    };
   }
 
   async generateSessionSummary(messages: Message[]): Promise<SessionStats> {
