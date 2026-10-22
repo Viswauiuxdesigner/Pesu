@@ -2,17 +2,20 @@ import { DetectedLanguage } from '../types/conversation';
 
 // Common Tanglish keywords (Romanized Tamil)
 const TANGLISH_KEYWORDS = new Set([
-  'enakku', 'unakku', 'avanukku', 'avalukku', 'engalukku', 'namma', 'namakku',
+  'enakku', 'enaku', 'unakku', 'avanukku', 'avalukku', 'engalukku', 'namma', 'namakku',
   'irukku', 'irukken', 'irukeenga', 'illa', 'illai', 'illana',
   'epdi', 'eppadi', 'enna', 'ethu', 'yaar', 'enge', 'engu', 'eppo', 'eppovum',
   'pesa', 'pesunga', 'pesanum', 'pesalam', 'pesuren', 'pesuraan',
-  'solla', 'sollunga', 'sollanum', 'sollalam', 'solren', 'solreenga',
-  'theriyala', 'puriyala', 'theriyum', 'puriyum',
+  'solla', 'sollunga', 'sollanum', 'sollalam', 'solren', 'solreenga', 'solra',
+  'theriyala', 'puriyala', 'purila', 'theriyum', 'puriyum',
   'bayama', 'thayakkama', 'hesitation', 'kashtama', 'sulabam',
   'romba', 'konjam', 'nalla', 'nallaa', 'aama', 'seri', 'podhum',
-  'pannu', 'pannunga', 'pannanum', 'pannalam', 'panren',
+  'pannu', 'pannunga', 'pannanum', 'pannalam', 'panren', 'panra', 'panreenga',
   'aprom', 'marubadiyum', 'inime', 'ippo', 'appo',
-  'vanakkam', 'nandri', 'thambi', 'anna', 'akka', 'pa', 'ma'
+  'vanakkam', 'nandri', 'thambi', 'anna', 'akka', 'pa', 'ma',
+  'sema', 'mokka', 'kaduppu', 'sappa', 'kathukanum', 'kathukalam', 'kathukrathu',
+  'da', 'daw', 'machan', 'machi', 'bro', 'nanba', 'innaiku', 'nethu', 'kaalaile',
+  'irundhuchu', 'irundhadhu', 'irukanga', 'ithu', 'adhu'
 ]);
 
 // Tanglish suffixes often attached to English words (e.g., "interview-la", "office-ku", "pesurathu")

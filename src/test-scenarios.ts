@@ -367,6 +367,136 @@ async function runComprehensiveTestSuite() {
   }
 
   // ===========================================================================
+  // TEST GROUP G2: Natural Conversational Intelligence & Screenshot Bug Fix
+  // ===========================================================================
+  console.log('\n--- TEST GROUP G2: Natural Conversational Intelligence & Screenshot Bug Fix ---');
+
+  // 1. "sema mokka" (Casual Tanglish slang for boring day)
+  {
+    const history: Message[] = [
+      { id: 'u0', role: 'user', content: 'hi', timestamp: Date.now() - 10000 },
+      { id: 'a0', role: 'assistant', content: 'Hey! 😊 How are you doing today? How was your day?', timestamp: Date.now() - 5000 }
+    ];
+    const res = await localProvider.sendMessage('sema mokka', history);
+    testReplies.push({ input: 'sema mokka', reply: res.replyText });
+    console.log(`User: "sema mokka"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.toLowerCase().includes('boring') || res.replyText.toLowerCase().includes('mokka'),
+      'sema mokka recognizes day is boring/dull without falling back'
+    );
+  }
+
+  // 2. "i mean its boring" (Clarification acknowledging meaning and not repeating fallback)
+  {
+    const history: Message[] = [
+      { id: 'u0', role: 'user', content: 'hi', timestamp: Date.now() - 20000 },
+      { id: 'a0', role: 'assistant', content: 'Hey! 😊 How are you doing today?', timestamp: Date.now() - 15000 },
+      { id: 'u1', role: 'user', content: 'sema mokka', timestamp: Date.now() - 10000 },
+      { id: 'a1', role: 'assistant', content: "I didn't quite catch that. Could you tell me a little more, or rephrase that in simple English or Tamil so I can understand you better?", timestamp: Date.now() - 5000 }
+    ];
+    const res = await localProvider.sendMessage('i mean its boring', history);
+    testReplies.push({ input: 'i mean its boring', reply: res.replyText });
+    console.log(`\nUser: "i mean its boring"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes("Ohh, got you!") && res.replyText.toLowerCase().includes("boring"),
+      'i mean its boring recognizes clarification and does NOT repeat the misunderstanding fallback'
+    );
+    assert(
+      !res.replyText.includes("didn't quite catch that"),
+      'Does NOT repeat "didn\'t quite catch that" on clarification'
+    );
+  }
+
+  // 3. "what is React?" (Direct question about tech)
+  {
+    const res = await localProvider.sendMessage('what is React?', []);
+    testReplies.push({ input: 'what is React?', reply: res.replyText });
+    console.log(`\nUser: "what is React?"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('JavaScript library') && res.replyText.includes('user interfaces'),
+      'what is React? accurately explains React rather than returning a speaking prompt'
+    );
+  }
+
+  // 4. "enna da panra" (Casual Tanglish check-in)
+  {
+    const res = await localProvider.sendMessage('enna da panra', []);
+    testReplies.push({ input: 'enna da panra', reply: res.replyText });
+    console.log(`\nUser: "enna da panra"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('chatting with you') && res.replyText.includes('Nee enna panra?'),
+      'enna da panra warmly responds to casual friend check-in'
+    );
+  }
+
+  // 5. "enaku english pesa kathukanum" (User wants to learn English)
+  {
+    const res = await localProvider.sendMessage('enaku english pesa kathukanum', []);
+    testReplies.push({ input: 'enaku english pesa kathukanum', reply: res.replyText });
+    console.log(`\nUser: "enaku english pesa kathukanum"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('Romba nalla vishayam!') && res.replyText.includes('practice'),
+      'enaku english pesa kathukanum gives supportive start without generic canned reply'
+    );
+  }
+
+  // 6. Tamil Script: "எனக்கு புரியல" (User says they don't understand in Tamil script)
+  {
+    const history: Message[] = [
+      { id: 'u0', role: 'user', content: 'What is React?', timestamp: Date.now() - 10000 },
+      { id: 'a0', role: 'assistant', content: 'React is a popular JavaScript library used for building user interfaces.', timestamp: Date.now() - 5000 }
+    ];
+    const res = await localProvider.sendMessage('எனக்கு புரியல', history);
+    testReplies.push({ input: 'எனக்கு புரியல', reply: res.replyText });
+    console.log(`\nUser: "எனக்கு புரியல"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('React') || res.tamilExplanation?.includes('React') || res.replyText.includes('மன்னிக்கவும்'),
+      'Tamil script "எனக்கு புரியல" explains previous message in Tamil'
+    );
+  }
+
+  // 7. "today office romba work" (Workday update)
+  {
+    const res = await localProvider.sendMessage('today office romba work', []);
+    testReplies.push({ input: 'today office romba work', reply: res.replyText });
+    console.log(`\nUser: "today office romba work"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('busy') && res.replyText.includes('I had a lot of work at the office today'),
+      'today office romba work responds empathetically with natural English phrasing'
+    );
+  }
+
+  // 8. "I am feeling nervous about speaking English" (Fear / hesitation)
+  {
+    const res = await localProvider.sendMessage('I am feeling nervous about speaking English', []);
+    testReplies.push({ input: 'I am feeling nervous about speaking English', reply: res.replyText });
+    console.log(`\nUser: "I am feeling nervous about speaking English"\nBot: ${res.replyText}`);
+    assert(
+      res.replyText.includes('bayam irukkuradhu normal') || res.replyText.toLowerCase().includes('mistakes'),
+      'I am feeling nervous about speaking English provides encouraging reassurance'
+    );
+  }
+
+  // 9. Multiple consecutive unrecognized messages (Ensures NO repeating identical fallback)
+  {
+    const res1 = await localProvider.sendMessage('xyzzy 12345 foo bar', []);
+    console.log(`\nUnknown Message 1 Bot: ${res1.replyText}`);
+
+    const history2: Message[] = [
+      { id: 'u0', role: 'user', content: 'xyzzy 12345 foo bar', timestamp: Date.now() - 10000 },
+      { id: 'a0', role: 'assistant', content: res1.replyText, timestamp: Date.now() - 5000 }
+    ];
+    const res2 = await localProvider.sendMessage('blorg flump qux zork', history2);
+    testReplies.push({ input: 'blorg flump qux zork (consecutive unknown)', reply: res2.replyText });
+    console.log(`Unknown Message 2 Bot: ${res2.replyText}`);
+
+    assert(
+      res1.replyText !== res2.replyText,
+      'Consecutive unknown inputs NEVER repeat identical fallback message consecutively'
+    );
+  }
+
+  // ===========================================================================
   // TEST GROUP H: Uniqueness of Replies Across Tested Inputs
   // ===========================================================================
   console.log('\n--- TEST GROUP H: Uniqueness of Replies Across Tested Inputs ---');
