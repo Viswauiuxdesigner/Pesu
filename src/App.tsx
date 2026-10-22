@@ -192,6 +192,12 @@ export const App: React.FC = () => {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
 
+    // Prevent duplicate rapid submissions (e.g. double click or rapid key presses)
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.role === 'user' && lastMsg.content === trimmed && (Date.now() - lastMsg.timestamp < 1500)) {
+      return;
+    }
+
     setRequestError(null);
     setLastFailedMessage(null);
 
