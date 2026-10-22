@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { Message, PracticeScenario } from '../types/conversation';
+import { Message, PracticeScenario, InterfaceLanguage } from '../types/conversation';
 import { MessageBubble } from './MessageBubble';
-import { Sparkles, MessageCircle } from 'lucide-react';
+import { TRANSLATIONS } from '../utils/translations';
+import { MessageCircle, RefreshCw } from 'lucide-react';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -11,8 +12,11 @@ interface ChatContainerProps {
   onStop: () => void;
   onRepeat: () => void;
   onSelectStarterPrompt: (promptText: string) => void;
+  onRetryLastMessage?: () => void;
   isLoading: boolean;
   alwaysShowTamil?: boolean;
+  interfaceLanguage?: InterfaceLanguage;
+  error?: string | null;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -23,34 +27,42 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   onStop,
   onRepeat,
   onSelectStarterPrompt,
+  onRetryLastMessage,
   isLoading,
-  alwaysShowTamil
+  alwaysShowTamil,
+  interfaceLanguage = 'en',
+  error
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const t = TRANSLATIONS[interfaceLanguage];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, error]);
+
+  // Find the ID of the last assistant message so chips only show on it
+  const lastAssistantMessageId = [...messages].reverse().find(m => m.role === 'assistant')?.id;
 
   return (
     <div className="chat-container">
-      {/* Scenario header banner inside chat */}
+      {/* Compact Scenario Welcome Card */}
       <div className="scenario-welcome-card">
         <div className="scenario-card-header">
           <div className="scenario-badge">
-            <Sparkles size={15} />
-            <span>{scenario.title}</span>
-            <span className="tamil-sub">({scenario.tamilTitle})</span>
+            <span>
+              {interfaceLanguage === 'ta' ? scenario.tamilTitle : scenario.title}
+            </span>
           </div>
         </div>
-        <p className="scenario-desc-en">{scenario.description}</p>
-        <p className="scenario-desc-ta">{scenario.tamilDescription}</p>
+        <p className="scenario-desc-en">
+          {interfaceLanguage === 'ta' ? scenario.tamilDescription : scenario.description}
+        </p>
 
-        {/* Starter Prompts */}
+        {/* Starter Prompts - Shown when beginning a session */}
         {messages.length <= 1 && (
           <div className="starter-prompts-section">
             <span className="starter-header">
-              <MessageCircle size={15} /> Quick Starter Prompts (தொடக்க வாக்கியங்கள்):
+              <MessageCircle size={14} /> {t.quickStarters}
             </span>
             <div className="starter-grid">
               {scenario.starterPrompts.map((p, idx) => (
@@ -61,7 +73,9 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                 >
                   <span className="starter-label">{p.label}</span>
                   <span className="starter-tanglish">"{p.tanglish}"</span>
-                  {p.tamil && <span className="starter-tamil">({p.tamil})</span>}
+                  {interfaceLanguage === 'ta' && p.tamil && (
+                    <span className="starter-tamil">{p.tamil}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -81,9 +95,12 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
             onRepeat={onRepeat}
             onSelectSuggestion={onSelectStarterPrompt}
             alwaysShowTamil={alwaysShowTamil}
+            interfaceLanguage={interfaceLanguage}
+            isLatestAssistantMessage={message.id === lastAssistantMessageId}
           />
         ))}
 
+        {/* Typing State */}
         {isLoading && (
           <div className="message-wrapper assistant-wrapper">
             <div className="assistant-avatar">
@@ -93,8 +110,20 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
               <span className="typing-dot"></span>
               <span className="typing-dot"></span>
               <span className="typing-dot"></span>
-              <span className="typing-text">PESU is thinking & listening...</span>
+              <span className="typing-text">{t.thinking}</span>
             </div>
+          </div>
+        )}
+
+        {/* Network / Error retry card */}
+        {error && (
+          <div className="speech-error-banner" role="alert">
+            <span className="error-text">{error}</span>
+            {onRetryLastMessage && (
+              <button className="btn-modal-action btn-secondary" onClick={onRetryLastMessage}>
+                <RefreshCw size={13} /> {t.retryBtn}
+              </button>
+            )}
           </div>
         )}
 

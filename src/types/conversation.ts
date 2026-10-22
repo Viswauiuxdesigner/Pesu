@@ -4,6 +4,8 @@ export type DetectedLanguage = 'tamil' | 'tanglish' | 'english' | 'mixed';
 
 export type RecognitionLanguage = 'auto' | 'ta-IN' | 'en-IN';
 
+export type InterfaceLanguage = 'en' | 'ta';
+
 export interface GrammarCorrection {
   original: string;
   improved: string;
@@ -71,5 +73,7 @@ export interface AppSettings {
   speechRate: number; // 0.8 to 1.2
   autoSpeakResponses: boolean;
   alwaysShowTamilExplanation: boolean;
+  interfaceLanguage: 'en' | 'ta';
+  theme: 'light' | 'dark';
   preferredVoiceURI?: string;
 }

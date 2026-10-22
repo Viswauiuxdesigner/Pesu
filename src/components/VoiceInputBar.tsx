@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Send, Globe, AlertCircle, RefreshCw, Check } from 'lucide-react';
-import { RecognitionLanguage } from '../types/conversation';
+import { RecognitionLanguage, InterfaceLanguage } from '../types/conversation';
+import { TRANSLATIONS } from '../utils/translations';
 import { AudioWaveform } from './AudioWaveform';
 
 interface VoiceInputBarProps {
@@ -15,6 +16,7 @@ interface VoiceInputBarProps {
   speechError: string | null;
   onClearSpeechError: () => void;
   isLoading: boolean;
+  interfaceLanguage?: InterfaceLanguage;
 }
 
 export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
@@ -28,17 +30,19 @@ export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
   isRecognitionSupported,
   speechError,
   onClearSpeechError,
-  isLoading
+  isLoading,
+  interfaceLanguage = 'en'
 }) => {
   const [inputText, setInputText] = useState('');
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const t = TRANSLATIONS[interfaceLanguage];
 
   // Auto-resize textarea as text grows
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 100)}px`;
     }
   }, [inputText]);
 
@@ -76,7 +80,7 @@ export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
       {/* Speech Error Banner if any */}
       {speechError && (
         <div className="speech-error-banner" role="alert">
-          <AlertCircle size={16} />
+          <AlertCircle size={15} />
           <span className="error-text">{speechError}</span>
           <button 
             className="btn-dismiss-error" 
@@ -92,33 +96,35 @@ export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
       {isListening && (
         <div className="listening-drawer">
           <div className="listening-pulse-header">
-            <AudioWaveform isActive={true} color="#ef4444" bars={6} />
-            <span className="listening-text">
-              Listening in <strong>{getLanguageLabel(recognitionLanguage)}</strong>...
-            </span>
+            <div className="flex items-center gap-2">
+              <AudioWaveform isActive={true} color="#EA580C" bars={4} />
+              <span className="listening-text">
+                {t.listeningIn} <strong>{getLanguageLabel(recognitionLanguage)}</strong>...
+              </span>
+            </div>
             <button 
               className="btn-done-speaking" 
               onClick={onStopListening}
             >
-              <Check size={16} /> Done Speaking
+              <Check size={14} /> {t.doneSpeaking}
             </button>
           </div>
 
           <div className="live-transcript-box">
             {interimTranscript ? (
-              <span className="live-transcript-text">"{interimTranscript}"</span>
+              <span>"{interimTranscript}"</span>
             ) : (
-              <span className="live-transcript-placeholder">
-                Speak now... You can speak Tamil, Tanglish, or English.
+              <span className="text-gray-400 italic">
+                {t.listeningPlaceholder}
               </span>
             )}
           </div>
         </div>
       )}
 
-      {/* Main Input Control Bar */}
+      {/* Main Input Control Row */}
       <div className="input-control-row">
-        {/* Language Selector Dropdown Button */}
+        {/* Recognition Language Selector Button */}
         <div className="language-selector-wrapper">
           <button
             type="button"
@@ -127,8 +133,8 @@ export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
             title="Speech Recognition Language"
             aria-label="Change voice recognition language"
           >
-            <Globe size={16} />
-            <span className="lang-code-text">
+            <Globe size={14} />
+            <span>
               {recognitionLanguage === 'ta-IN' ? 'தமிழ்' : recognitionLanguage === 'en-IN' ? 'EN' : 'Auto'}
             </span>
           </button>
@@ -160,7 +166,7 @@ export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
                   setShowLanguageMenu(false);
                 }}
               >
-                English - India (en-IN)
+                English (en-IN)
               </button>
             </div>
           )}
@@ -171,11 +177,7 @@ export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
           <textarea
             ref={textareaRef}
             className="input-textarea"
-            placeholder={
-              isListening 
-                ? "Listening to your voice..." 
-                : "Type Tamil, Tanglish, or English (e.g. 'I am go to office yesterday' or 'Enakku hesitating irukku')..."
-            }
+            placeholder={isListening ? t.listeningPlaceholder : t.inputPlaceholder}
             rows={1}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -190,26 +192,23 @@ export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
           {isListening ? (
             <button
               type="button"
-              className="btn-mic listening active-pulse"
+              className="btn-mic listening"
               onClick={onStopListening}
-              title="Stop listening"
-              aria-label="Stop microphone"
+              title={t.stopSpeakingTooltip}
+              aria-label={t.stopSpeakingTooltip}
             >
-              <MicOff size={22} />
+              <MicOff size={20} />
             </button>
           ) : (
             <button
               type="button"
-              className={`btn-mic ${!isRecognitionSupported ? 'disabled' : ''}`}
+              className="btn-mic"
               onClick={onStartListening}
-              title={
-                isRecognitionSupported 
-                  ? "Start Speaking (Tamil or English)" 
-                  : "Voice recognition unsupported on this browser (use text)"
-              }
-              aria-label="Start microphone"
+              disabled={!isRecognitionSupported}
+              title={isRecognitionSupported ? t.startSpeakingTooltip : 'Web Speech is unsupported in this browser'}
+              aria-label={t.startSpeakingTooltip}
             >
-              <Mic size={22} />
+              <Mic size={20} />
             </button>
           )}
         </div>
@@ -220,18 +219,16 @@ export const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
           className="btn-send"
           onClick={handleSend}
           disabled={!inputText.trim() || isLoading}
-          title="Send message (Enter)"
-          aria-label="Send message"
+          title={t.sendTooltip}
+          aria-label={t.sendTooltip}
         >
-          {isLoading ? <RefreshCw size={18} className="animate-spin" /> : <Send size={18} />}
+          {isLoading ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </div>
 
       <div className="input-helper-bar">
-        <span className="privacy-text">
-          🔒 Voice is processed in real time and never stored. Free & zero cost.
-        </span>
-        <span className="kbd-shortcut-text">Press <strong>Enter ↵</strong> to send</span>
+        <span>{t.privacyNotice}</span>
+        <span>{t.keyboardShortcut}</span>
       </div>
     </div>
   );

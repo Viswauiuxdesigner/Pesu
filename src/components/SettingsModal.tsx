@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { AppSettings, AIProviderType } from '../types/conversation';
+import { AppSettings, InterfaceLanguage } from '../types/conversation';
 import { VoiceOption } from '../types/speech';
+import { TRANSLATIONS } from '../utils/translations';
 import { 
   Settings, 
   Cpu, 
@@ -8,9 +9,10 @@ import {
   Volume2, 
   Trash2, 
   X, 
-  ShieldCheck, 
   ExternalLink,
-  BookOpen
+  BookOpen,
+  Globe,
+  Sun
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -36,13 +38,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
+  const t = TRANSLATIONS[formData.interfaceLanguage];
+
   const handleSave = () => {
     onUpdateSettings(formData);
     onClose();
   };
 
   const handleClearHistoryClick = () => {
-    if (window.confirm('Are you sure you want to clear your local chat history? This cannot be undone.')) {
+    if (window.confirm('Clear your local chat history? This cannot be undone.')) {
       onClearHistory();
       setHistoryClearedNotice(true);
       setTimeout(() => setHistoryClearedNotice(false), 3000);
@@ -54,8 +58,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="settings-modal-card">
         <div className="modal-header">
           <div className="modal-title-group">
-            <Settings size={22} className="text-emerald-400" />
-            <h3 className="modal-title">Settings & AI Configuration</h3>
+            <Settings size={20} className="text-orange-500" />
+            <h3 className="modal-title">{t.settingsTitle}</h3>
           </div>
           <button className="btn-close-modal" onClick={onClose} aria-label="Close modal">
             <X size={18} />
@@ -63,10 +67,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         <div className="settings-scroll-area">
+          {/* Interface Language & Theme */}
+          <div className="settings-group">
+            <label className="settings-label">
+              <Globe size={16} /> {t.interfaceLangTitle}
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`btn-modal-action ${formData.interfaceLanguage === 'en' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setFormData({ ...formData, interfaceLanguage: 'en' })}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                className={`btn-modal-action ${formData.interfaceLanguage === 'ta' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setFormData({ ...formData, interfaceLanguage: 'ta' })}
+              >
+                தமிழ் (Tamil)
+              </button>
+            </div>
+            <span className="text-xs text-gray-500">{t.interfaceLangDesc}</span>
+          </div>
+
+          {/* Theme Selector */}
+          <div className="settings-group">
+            <label className="settings-label">
+              <Sun size={16} /> Theme (தோற்றம்)
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`btn-modal-action ${formData.theme === 'light' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setFormData({ ...formData, theme: 'light' })}
+              >
+                Warm Light (வெளிர் நிறம்)
+              </button>
+              <button
+                type="button"
+                className={`btn-modal-action ${formData.theme === 'dark' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setFormData({ ...formData, theme: 'dark' })}
+              >
+                Refined Dark (இருள் நிறம்)
+              </button>
+            </div>
+          </div>
+
           {/* AI Provider Section */}
           <div className="settings-group">
             <label className="settings-label">
-              <Cpu size={16} /> AI Conversation Engine
+              <Cpu size={16} /> {t.aiEngineTitle}
             </label>
             <div className="provider-options-grid">
               <div 
@@ -74,12 +125,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onClick={() => setFormData({ ...formData, aiProvider: 'local' })}
               >
                 <div className="provider-header">
-                  <span className="provider-name">PESU Offline Engine</span>
-                  <span className="provider-badge-free">100% Free / No Key</span>
+                  <span className="provider-name">{t.offlineTutorTitle}</span>
+                  <span className="provider-badge-free">{t.offlineTutorBadge}</span>
                 </div>
-                <p className="provider-desc">
-                  Built-in zero-cost speaking partner with Tamil explanation, rule-based corrections, and scenario graphs. Instant and fully offline.
-                </p>
+                <p className="provider-desc">{t.offlineTutorDesc}</p>
               </div>
 
               <div 
@@ -87,12 +136,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onClick={() => setFormData({ ...formData, aiProvider: 'gemini' })}
               >
                 <div className="provider-header">
-                  <span className="provider-name">Google Gemini 2.0 Flash</span>
-                  <span className="provider-badge-ai">Cloud Free Tier</span>
+                  <span className="provider-name">{t.geminiTitle}</span>
+                  <span className="provider-badge-ai">{t.geminiBadge}</span>
                 </div>
-                <p className="provider-desc">
-                  Uses Google's generative AI for open-ended conversation. Requires your own free Gemini API key or serverless endpoint.
-                </p>
+                <p className="provider-desc">{t.geminiDesc}</p>
               </div>
             </div>
           </div>
@@ -100,37 +147,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Gemini Key Input (if Gemini is selected) */}
           {formData.aiProvider === 'gemini' && (
             <div className="settings-subgroup">
-              <label className="settings-sublabel">
-                <Key size={15} /> Your Free Gemini API Key (Optional Client-Side)
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Key size={14} /> {t.apiKeyLabel}
               </label>
-              <div className="api-key-input-row">
+              <div className="flex gap-2">
                 <input
                   type={showKey ? 'text' : 'password'}
                   className="settings-input"
-                  placeholder="Paste your AI Studio API key (AIzaSy...)"
+                  placeholder={t.apiKeyPlaceholder}
                   value={formData.geminiApiKey}
                   onChange={(e) => setFormData({ ...formData, geminiApiKey: e.target.value })}
                 />
                 <button 
                   type="button" 
-                  className="btn-toggle-key" 
+                  className="btn-modal-action btn-secondary" 
                   onClick={() => setShowKey(!showKey)}
                 >
-                  {showKey ? 'Hide' : 'Show'}
+                  {showKey ? t.hide : t.show}
                 </button>
               </div>
-              <div className="security-notice">
-                <ShieldCheck size={14} className="text-emerald-400" />
-                <span>Saved securely in your browser's localStorage only. Never transmitted to PESU servers.</span>
-              </div>
+              <span className="text-xs text-gray-500">{t.apiKeyNotice}</span>
               <a 
                 href="https://aistudio.google.com/app/apikey" 
                 target="_blank" 
                 rel="noreferrer"
-                className="get-key-link"
+                className="text-xs text-orange-600 dark:text-orange-400 inline-flex items-center gap-1 hover:underline mt-1"
               >
-                <span>Get a free Gemini API key from Google AI Studio</span>
-                <ExternalLink size={12} />
+                <span>{t.getKeyLink}</span>
+                <ExternalLink size={11} />
               </a>
             </div>
           )}
@@ -138,34 +182,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Voice & Speech Controls */}
           <div className="settings-group">
             <label className="settings-label">
-              <Volume2 size={16} /> Voice & Speech Settings
+              <Volume2 size={16} /> {t.voiceSettingsTitle}
             </label>
 
-            {/* Speech Rate Slider */}
-            <div className="slider-control-row">
-              <div className="slider-label-group">
-                <span>Speaking Rate:</span>
-                <span className="slider-val">{formData.speechRate}x</span>
+            <div className="toggle-row">
+              <div className="flex flex-col gap-1 w-full">
+                <div className="flex justify-between text-xs font-medium">
+                  <span>{t.speakingRate}</span>
+                  <span className="font-bold text-orange-600">{formData.speechRate}x</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.75"
+                  max="1.25"
+                  step="0.05"
+                  value={formData.speechRate}
+                  onChange={(e) => setFormData({ ...formData, speechRate: parseFloat(e.target.value) })}
+                  className="settings-slider"
+                />
+                <span className="text-xs text-gray-400">
+                  {formData.speechRate < 0.95 ? t.rateSlowHint : formData.speechRate > 1.05 ? t.rateFastHint : t.rateNormalHint}
+                </span>
               </div>
-              <input
-                type="range"
-                min="0.7"
-                max="1.3"
-                step="0.05"
-                value={formData.speechRate}
-                onChange={(e) => setFormData({ ...formData, speechRate: parseFloat(e.target.value) })}
-                className="settings-slider"
-              />
-              <span className="slider-hint">
-                {formData.speechRate < 0.95 ? 'Slower (Great for learners)' : formData.speechRate > 1.05 ? 'Fast' : 'Natural pace'}
-              </span>
             </div>
 
-            {/* Auto speak responses */}
             <div className="toggle-row">
-              <div className="toggle-text">
-                <span className="toggle-title">Auto-speak AI responses</span>
-                <span className="toggle-desc">Automatically read aloud the English reply when received</span>
+              <div className="flex flex-col">
+                <span className="toggle-title">{t.autoSpeakTitle}</span>
+                <span className="toggle-desc">{t.autoSpeakDesc}</span>
               </div>
               <input
                 type="checkbox"
@@ -175,16 +219,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
 
-            {/* Voice dropdown */}
             {availableVoices.length > 0 && (
-              <div className="select-row">
-                <label className="settings-sublabel">Preferred System Voice:</label>
+              <div className="toggle-row flex-col items-start gap-2">
+                <label className="text-xs font-semibold">{t.systemVoiceTitle}</label>
                 <select
                   className="settings-select"
                   value={formData.preferredVoiceURI || ''}
                   onChange={(e) => setFormData({ ...formData, preferredVoiceURI: e.target.value })}
                 >
-                  <option value="">Default Recommended Voice</option>
+                  <option value="">{t.defaultVoice}</option>
                   {availableVoices.map((v) => (
                     <option key={v.voice.voiceURI} value={v.voice.voiceURI}>
                       {v.displayName} {v.isTamil ? '⭐️ [Tamil]' : v.isIndianEnglish ? '🇮🇳 [Indian English]' : ''}
@@ -195,15 +238,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
-          {/* Language & Teaching Preferences */}
+          {/* Learning Preferences */}
           <div className="settings-group">
             <label className="settings-label">
-              <BookOpen size={16} /> Learning Preferences
+              <BookOpen size={16} /> {formData.interfaceLanguage === 'ta' ? 'கற்றல் விருப்பங்கள்' : 'Learning Preferences'}
             </label>
             <div className="toggle-row">
-              <div className="toggle-text">
-                <span className="toggle-title">Always show Tamil explanations</span>
-                <span className="toggle-desc">Automatically expand the Tamil explanation card on every message</span>
+              <div className="flex flex-col">
+                <span className="toggle-title">{t.alwaysTamilTitle}</span>
+                <span className="toggle-desc">{t.alwaysTamilDesc}</span>
               </div>
               <input
                 type="checkbox"
@@ -214,35 +257,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Data & History */}
+          {/* Privacy & Local History */}
           <div className="settings-group">
-            <label className="settings-label text-rose-400">
-              <Trash2 size={16} /> Privacy & Local Data
+            <label className="settings-label text-rose-500">
+              <Trash2 size={16} /> {t.privacyDataTitle}
             </label>
-            <div className="clear-data-row">
-              <p className="clear-data-desc">
-                Your conversation history is stored strictly on your device. You can reset it anytime.
-              </p>
+            <div className="flex justify-between items-center bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-900/40">
+              <span className="text-xs text-gray-600 dark:text-gray-400">{t.privacyDataDesc}</span>
               <button
                 type="button"
                 className="btn-clear-history"
                 onClick={handleClearHistoryClick}
               >
-                <Trash2 size={15} /> Clear Chat History
+                <Trash2 size={13} /> {t.clearHistoryBtn}
               </button>
             </div>
             {historyClearedNotice && (
-              <p className="history-cleared-text">✓ Chat history cleared successfully.</p>
+              <span className="text-xs text-emerald-600 font-semibold">{t.historyClearedMsg}</span>
             )}
           </div>
         </div>
 
         <div className="modal-footer-actions">
           <button type="button" className="btn-modal-action btn-cancel" onClick={onClose}>
-            Cancel
+            {t.cancelBtn}
           </button>
           <button type="button" className="btn-modal-action btn-primary" onClick={handleSave}>
-            Save Changes
+            {t.saveChangesBtn}
           </button>
         </div>
       </div>

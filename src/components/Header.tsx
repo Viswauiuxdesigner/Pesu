@@ -1,13 +1,14 @@
 import React from 'react';
 import { PracticeScenario, AppSettings } from '../types/conversation';
+import { TRANSLATIONS } from '../utils/translations';
 import { 
-  Sparkles, 
   Settings, 
   RotateCcw, 
   Award, 
   Compass, 
-  ShieldCheck,
-  Cpu
+  Sun, 
+  Moon,
+  Globe
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -17,6 +18,8 @@ interface HeaderProps {
   onOpenSummary: () => void;
   onOpenSettings: () => void;
   onResetChat: () => void;
+  onToggleLanguage: () => void;
+  onToggleTheme: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,78 +28,95 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenScenarios,
   onOpenSummary,
   onOpenSettings,
-  onResetChat
+  onResetChat,
+  onToggleLanguage,
+  onToggleTheme
 }) => {
+  const t = TRANSLATIONS[settings.interfaceLanguage];
+
   return (
     <header className="app-header">
       <div className="header-left">
-        <div className="brand-logo-container">
-          <div className="brand-icon">
+        <div className="brand-link" onClick={onOpenScenarios} title={t.brandTagline}>
+          <div className="brand-badge">
             <span>பேசு</span>
           </div>
-          <div className="brand-text-group">
-            <div className="brand-row">
-              <h1 className="brand-title">PESU</h1>
-              <span className="brand-tag">Bilingual AI Partner</span>
-            </div>
-            <span className="brand-sub">Tamil + English Speaking Practice</span>
+          <div className="brand-text-col">
+            <span className="brand-title">{t.brandName}</span>
+            <span className="brand-subtitle">{t.brandTagline}</span>
           </div>
         </div>
 
-        {/* Current Scenario Pill */}
+        {/* Compact Scenario Pill */}
         <button 
-          className="scenario-pill-btn" 
+          className="scenario-pill-compact" 
           onClick={onOpenScenarios}
-          title="Click to change practice scenario"
+          title={t.changeScenario}
+          aria-label={t.changeScenario}
         >
-          <Compass size={14} className="text-emerald-400" />
-          <span className="pill-name">{currentScenario.title}</span>
-          <span className="pill-ta">({currentScenario.tamilTitle})</span>
+          <Compass size={14} className="text-orange-500" />
+          <span>
+            {settings.interfaceLanguage === 'ta' ? currentScenario.tamilTitle : currentScenario.title}
+          </span>
         </button>
       </div>
 
       <div className="header-right">
-        {/* Provider Indicator */}
-        <div className="provider-indicator-tag" title="Active AI Engine">
-          <Cpu size={14} />
-          <span>{settings.aiProvider === 'local' ? 'PESU Local Engine (Zero-Cost)' : 'Gemini 2.0 Flash'}</span>
-        </div>
+        {/* Quick UI Language Toggle Button */}
+        <button
+          type="button"
+          className="btn-header-action btn-lang-toggle"
+          onClick={onToggleLanguage}
+          title={`Switch interface language to ${settings.interfaceLanguage === 'en' ? 'தமிழ்' : 'English'}`}
+          aria-label="Toggle interface language"
+        >
+          <Globe size={14} />
+          <span>{settings.interfaceLanguage === 'en' ? 'தமிழ்' : 'English'}</span>
+        </button>
 
-        {/* Action Buttons */}
-        <div className="action-buttons-group">
-          <button
-            type="button"
-            className="header-icon-btn"
-            onClick={onOpenSummary}
-            title="Session Summary & Progress (பயிற்சி சுருக்கம்)"
-            aria-label="View session summary"
-          >
-            <Award size={18} />
-            <span className="btn-label-desktop">Summary</span>
-          </button>
+        {/* Theme Toggle (Light / Dark) */}
+        <button
+          type="button"
+          className="btn-header-action"
+          onClick={onToggleTheme}
+          title="Toggle light/dark theme"
+          aria-label="Toggle theme"
+        >
+          {settings.theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
 
-          <button
-            type="button"
-            className="header-icon-btn"
-            onClick={onResetChat}
-            title="Reset Conversation (புதிதாக தொடங்கு)"
-            aria-label="Reset conversation"
-          >
-            <RotateCcw size={18} />
-            <span className="btn-label-desktop">Reset</span>
-          </button>
+        {/* Session Summary Button */}
+        <button
+          type="button"
+          className="btn-header-action"
+          onClick={onOpenSummary}
+          title={t.summaryBtn}
+          aria-label={t.summaryBtn}
+        >
+          <Award size={15} />
+        </button>
 
-          <button
-            type="button"
-            className="header-icon-btn"
-            onClick={onOpenSettings}
-            title="Settings (அமைப்புகள்)"
-            aria-label="Open settings"
-          >
-            <Settings size={18} />
-            <span className="btn-label-desktop">Settings</span>
-          </button>
-        </div>
+        {/* Reset Conversation */}
+        <button
+          type="button"
+          className="btn-header-action"
+          onClick={onResetChat}
+          title={t.resetBtn}
+          aria-label={t.resetBtn}
+        >
+          <RotateCcw size={15} />
+        </button>
+
+        {/* Settings */}
+        <button
+          type="button"
+          className="btn-header-action"
+          onClick={onOpenSettings}
+          title={t.settingsBtn}
+          aria-label={t.settingsBtn}
+        >
+          <Settings size={15} />
+        </button>
       </div>
     </header>
   );

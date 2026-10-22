@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Message, 
   ScenarioId, 
   AppSettings, 
   SessionStats, 
-  RecognitionLanguage 
+  RecognitionLanguage,
+  InterfaceLanguage
 } from './types/conversation';
 import { VoiceOption } from './types/speech';
 import { Header } from './components/Header';
@@ -14,13 +15,14 @@ import { TranscriptReviewModal } from './components/TranscriptReviewModal';
 import { PracticeSummaryModal } from './components/PracticeSummaryModal';
 import { ScenarioSelector } from './components/ScenarioSelector';
 import { SettingsModal } from './components/SettingsModal';
-import { PRACTICE_SCENARIOS, getScenarioById } from './services/ai/scenarios';
+import { getScenarioById } from './services/ai/scenarios';
 import { LocalSpeakingTutorProvider } from './services/ai/localProvider';
 import { GeminiSpeakingProvider } from './services/ai/geminiProvider';
 import { speechRecognizer } from './services/speech/speechRecognition';
 import { speechSynthesizer } from './services/speech/speechSynthesis';
 import { StorageService } from './services/storage/storageService';
 import { detectLanguage } from './utils/languageDetector';
+import { TRANSLATIONS } from './utils/translations';
 
 export const App: React.FC = () => {
   // Settings & Preferences
@@ -41,9 +43,9 @@ export const App: React.FC = () => {
         tamilExplanation: initialScenario.initialTamilExplanation,
         timestamp: Date.now(),
         suggestedResponses: [
-          'Enakku interview-la self introduction English-la solla theriyala.',
-          'I am go to office yesterday.',
-          'Can you explain this in Tamil?'
+          'Enakku English pesa romba bayama irukku, epdi start panrathu?',
+          'shall we talk',
+          'I am go to office yesterday'
         ]
       }
     ];
@@ -62,10 +64,12 @@ export const App: React.FC = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
 
-  // Audio Playback State
+  // Audio Playback & Request State
   const [currentlyPlayingId, setCurrentlyPlayingId] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<VoiceOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
   // AI Provider instances
   const localProvider = useMemo(() => new LocalSpeakingTutorProvider(), []);
@@ -76,6 +80,13 @@ export const App: React.FC = () => {
   const activeProvider = useMemo(() => {
     return settings.aiProvider === 'gemini' ? geminiProvider : localProvider;
   }, [settings.aiProvider, geminiProvider, localProvider]);
+
+  // Synchronize Theme attribute on <html> element
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', settings.theme || 'light');
+    }
+  }, [settings.theme]);
 
   // Load available speech synthesis voices
   useEffect(() => {
@@ -93,10 +104,24 @@ export const App: React.FC = () => {
     StorageService.saveMessages(messages);
   }, [messages]);
 
-  // Save settings
+  // Save settings helper
   const handleUpdateSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
     StorageService.saveSettings(newSettings);
+  };
+
+  // Toggle interface language quickly from header
+  const handleToggleInterfaceLanguage = () => {
+    const nextLang: InterfaceLanguage = settings.interfaceLanguage === 'en' ? 'ta' : 'en';
+    const updated = { ...settings, interfaceLanguage: nextLang };
+    handleUpdateSettings(updated);
+  };
+
+  // Toggle theme quickly from header
+  const handleToggleTheme = () => {
+    const nextTheme: 'light' | 'dark' = settings.theme === 'dark' ? 'light' : 'dark';
+    const updated = { ...settings, theme: nextTheme };
+    handleUpdateSettings(updated);
   };
 
   // Switch scenario
@@ -104,14 +129,13 @@ export const App: React.FC = () => {
     setActiveScenarioId(scenarioId);
     const scen = getScenarioById(scenarioId);
     
-    // Add scenario intro message
     const introMessage: Message = {
       id: `msg-${Date.now()}`,
       role: 'assistant',
       content: scen.initialMessage,
       tamilExplanation: scen.initialTamilExplanation,
       timestamp: Date.now(),
-      suggestedResponses: scen.starterPrompts.map(p => p.tanglish || p.english || '')
+      suggestedResponses: scen.starterPrompts.slice(0, 3).map(p => p.tanglish || p.english || '')
     };
 
     setMessages(prev => [...prev, introMessage]);
@@ -123,7 +147,8 @@ export const App: React.FC = () => {
 
   // Reset chat
   const handleResetChat = () => {
-    if (window.confirm('Reset conversation? You will start fresh with the current scenario.')) {
+    const t = TRANSLATIONS[settings.interfaceLanguage];
+    if (window.confirm(t.confirmResetDesc)) {
       speechSynthesizer.stop();
       setCurrentlyPlayingId(null);
       const scen = getScenarioById(activeScenarioId);
@@ -134,11 +159,13 @@ export const App: React.FC = () => {
           content: scen.initialMessage,
           tamilExplanation: scen.initialTamilExplanation,
           timestamp: Date.now(),
-          suggestedResponses: scen.starterPrompts.map(p => p.tanglish || p.english || '')
+          suggestedResponses: scen.starterPrompts.slice(0, 3).map(p => p.tanglish || p.english || '')
         }
       ];
       setMessages(freshMessages);
       StorageService.clearMessages();
+      setRequestError(null);
+      setLastFailedMessage(null);
     }
   };
 
@@ -155,7 +182,7 @@ export const App: React.FC = () => {
         content: scen.initialMessage,
         tamilExplanation: scen.initialTamilExplanation,
         timestamp: Date.now(),
-        suggestedResponses: scen.starterPrompts.map(p => p.tanglish || p.english || '')
+        suggestedResponses: scen.starterPrompts.slice(0, 3).map(p => p.tanglish || p.english || '')
       }
     ]);
   };
@@ -163,9 +190,11 @@ export const App: React.FC = () => {
   // Send message flow
   const handleSendMessage = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || isLoading) return;
 
-    // Detect user language
+    setRequestError(null);
+    setLastFailedMessage(null);
+
     const detectedLang = detectLanguage(trimmed);
 
     const userMessage: Message = {
@@ -200,22 +229,22 @@ export const App: React.FC = () => {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Auto-speak English response if enabled
       if (settings.autoSpeakResponses) {
         handleSpeak(assistantMessage.id, assistantMessage.content, 'en');
       }
     } catch (err: any) {
-      console.error('Error generating AI response:', err);
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: `I had trouble connecting to the network. Don't worry! Let's continue practicing using the offline tutor mode.`,
-        tamilExplanation: `இணைப்பில் சிறிய தாமதம் ஏற்பட்டுள்ளது. ஆஃப்லைன் முறையில் தடையின்றி பயிற்சியை தொடரலாம்.`,
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      console.warn('Error generating AI response:', err);
+      setLastFailedMessage(trimmed);
+      setRequestError('Could not connect to the speaking partner. Please retry or continue in offline mode.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Retry sending last failed message
+  const handleRetryLastMessage = () => {
+    if (lastFailedMessage) {
+      handleSendMessage(lastFailedMessage);
     }
   };
 
@@ -293,9 +322,8 @@ export const App: React.FC = () => {
       onEnd: () => {
         setCurrentlyPlayingId(null);
       },
-      onError: (err) => {
+      onError: () => {
         setCurrentlyPlayingId(null);
-        console.warn('Speech playback error or missing voice:', err);
       }
     });
   };
@@ -328,9 +356,11 @@ export const App: React.FC = () => {
         onOpenSummary={handleOpenSummary}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onResetChat={handleResetChat}
+        onToggleLanguage={handleToggleInterfaceLanguage}
+        onToggleTheme={handleToggleTheme}
       />
 
-      {/* Main Conversation Flow */}
+      {/* Main Conversation Stream */}
       <main className="main-content">
         <ChatContainer
           messages={messages}
@@ -340,8 +370,11 @@ export const App: React.FC = () => {
           onStop={handleStopSpeaking}
           onRepeat={handleRepeatSpeaking}
           onSelectStarterPrompt={(promptText) => handleSendMessage(promptText)}
+          onRetryLastMessage={handleRetryLastMessage}
           isLoading={isLoading}
           alwaysShowTamil={settings.alwaysShowTamilExplanation}
+          interfaceLanguage={settings.interfaceLanguage}
+          error={requestError}
         />
       </main>
 
@@ -354,11 +387,12 @@ export const App: React.FC = () => {
           onStartListening={handleStartListening}
           onStopListening={handleStopListening}
           recognitionLanguage={settings.recognitionLanguage}
-          onChangeRecognitionLanguage={(lang) => handleUpdateSettings({ ...settings, recognitionLanguage: lang })}
+          onChangeRecognitionLanguage={(lang: RecognitionLanguage) => handleUpdateSettings({ ...settings, recognitionLanguage: lang })}
           isRecognitionSupported={speechRecognizer.isSupported()}
           speechError={speechError}
           onClearSpeechError={() => setSpeechError(null)}
           isLoading={isLoading}
+          interfaceLanguage={settings.interfaceLanguage}
         />
       </footer>
 
@@ -370,6 +404,7 @@ export const App: React.FC = () => {
         onRetry={handleRetryListening}
         onCancel={() => setIsReviewModalOpen(false)}
         onSpeakPreview={(txt) => speechSynthesizer.speak(txt, { lang: 'en', rate: settings.speechRate })}
+        interfaceLanguage={settings.interfaceLanguage}
       />
 
       {/* Practice Scenarios Modal */}
@@ -378,6 +413,7 @@ export const App: React.FC = () => {
         activeScenarioId={activeScenarioId}
         onSelectScenario={handleSelectScenario}
         onClose={() => setIsScenariosOpen(false)}
+        interfaceLanguage={settings.interfaceLanguage}
       />
 
       {/* Session Progress & Summary Modal */}
@@ -389,6 +425,7 @@ export const App: React.FC = () => {
           setIsSummaryOpen(false);
           handleResetChat();
         }}
+        interfaceLanguage={settings.interfaceLanguage}
       />
 
       {/* Settings Modal */}

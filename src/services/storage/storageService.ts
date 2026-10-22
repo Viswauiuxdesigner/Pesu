@@ -11,7 +11,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   recognitionLanguage: 'auto',
   speechRate: 0.92,
   autoSpeakResponses: true,
-  alwaysShowTamilExplanation: false
+  alwaysShowTamilExplanation: false,
+  interfaceLanguage: 'en',
+  theme: 'light'
 };
 
 export class StorageService {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Message } from '../types/conversation';
-import { Volume2, VolumeX, RotateCcw, Sparkles, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { Message, InterfaceLanguage } from '../types/conversation';
+import { TRANSLATIONS } from '../utils/translations';
+import { Volume2, VolumeX, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { AudioWaveform } from './AudioWaveform';
 
 interface MessageBubbleProps {
@@ -11,6 +12,8 @@ interface MessageBubbleProps {
   onRepeat: () => void;
   onSelectSuggestion?: (text: string) => void;
   alwaysShowTamil?: boolean;
+  interfaceLanguage?: InterfaceLanguage;
+  isLatestAssistantMessage?: boolean;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -20,21 +23,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onStop,
   onRepeat,
   onSelectSuggestion,
-  alwaysShowTamil = false
+  alwaysShowTamil = false,
+  interfaceLanguage = 'en',
+  isLatestAssistantMessage = false
 }) => {
   const isUser = message.role === 'user';
   const [showTamil, setShowTamil] = useState<boolean>(alwaysShowTamil);
+  const t = TRANSLATIONS[interfaceLanguage];
 
   const getLanguageBadge = (lang?: string) => {
     switch (lang) {
       case 'tamil':
-        return <span className="lang-badge badge-tamil">தமிழ் (Tamil)</span>;
+        return <span className="lang-badge">தமிழ்</span>;
       case 'tanglish':
-        return <span className="lang-badge badge-tanglish">Tanglish (Romanized)</span>;
+        return <span className="lang-badge">Tanglish</span>;
       case 'mixed':
-        return <span className="lang-badge badge-mixed">Tamil + English</span>;
+        return <span className="lang-badge">Tamil + English</span>;
       case 'english':
-        return <span className="lang-badge badge-english">English</span>;
+        return <span className="lang-badge">English</span>;
       default:
         return null;
     }
@@ -45,7 +51,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       <div className="message-wrapper user-wrapper">
         <div className="message-bubble user-bubble">
           <div className="message-header-row">
-            <span className="sender-label">You</span>
+            <span className="sender-label">{t.you}</span>
             {getLanguageBadge(message.detectedLanguage)}
           </div>
           <div className="message-content">{message.content}</div>
@@ -62,8 +68,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       <div className="message-bubble assistant-bubble">
         <div className="message-header-row">
           <div className="assistant-title-group">
-            <span className="sender-label font-bold">PESU Partner</span>
-            <span className="sub-badge">Speaking Coach</span>
+            <span className="sender-label">{t.brandName}</span>
+            <span className="sub-badge">{t.speakingCoach}</span>
           </div>
 
           <div className="audio-actions">
@@ -71,37 +77,37 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               <button 
                 className="btn-icon-audio active" 
                 onClick={onStop}
-                title="Stop speaking"
-                aria-label="Stop speaking"
+                title={t.stop}
+                aria-label={t.stop}
               >
-                <AudioWaveform isActive={true} color="#10b981" bars={4} />
-                <VolumeX size={16} />
+                <AudioWaveform isActive={true} color="#FFFFFF" bars={3} />
+                <VolumeX size={14} />
               </button>
             ) : (
               <button 
                 className="btn-icon-audio" 
                 onClick={() => onSpeak(message.content, 'en')}
-                title="Listen in English"
-                aria-label="Speak response"
+                title={t.listen}
+                aria-label={t.listen}
               >
-                <Volume2 size={16} />
-                <span>Listen</span>
+                <Volume2 size={14} />
+                <span>{t.listen}</span>
               </button>
             )}
 
             <button 
               className="btn-icon-audio" 
               onClick={onRepeat}
-              title="Repeat audio"
-              aria-label="Repeat response"
+              title={t.repeat}
+              aria-label={t.repeat}
             >
-              <RotateCcw size={15} />
+              <RotateCcw size={13} />
             </button>
           </div>
         </div>
 
         {/* Main AI reply */}
-        <div className="message-content leading-relaxed whitespace-pre-line">
+        <div className="message-content whitespace-pre-line">
           {message.content}
         </div>
 
@@ -109,17 +115,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {message.grammarCorrection && (
           <div className="grammar-correction-card">
             <div className="card-header">
-              <Sparkles size={16} className="text-amber-400" />
-              <span className="card-title">💡 Speaking Tip / வாக்கிய திருத்தம்</span>
+              <span className="card-title">{t.speakingTip}</span>
             </div>
             
             <div className="correction-diff">
               <div className="diff-item original">
-                <span className="diff-tag">Your phrase:</span>
+                <span className="diff-tag">{t.yourPhrase}</span>
                 <span className="diff-text strikethrough">"{message.grammarCorrection.original}"</span>
               </div>
               <div className="diff-item improved">
-                <span className="diff-tag">Natural English:</span>
+                <span className="diff-tag">{t.naturalEnglish}</span>
                 <span className="diff-text highlight">"{message.grammarCorrection.improved}"</span>
               </div>
             </div>
@@ -134,8 +139,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* Pronunciation guide */}
         {message.pronunciationGuide && (
           <div className="pronunciation-card">
-            <span className="font-semibold text-xs text-sky-400">உச்சரிப்பு (Pronunciation):</span>
-            <span className="pronunciation-text">{message.pronunciationGuide}</span>
+            <span className="pronunciation-text">🗣️ {message.pronunciationGuide}</span>
           </div>
         )}
 
@@ -147,9 +151,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               onClick={() => setShowTamil(!showTamil)}
               aria-expanded={showTamil}
             >
-              <BookOpen size={15} />
-              <span>தமிழ் விளக்கம் (Tamil Explanation)</span>
-              {showTamil ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              <span>{t.tamilExplanation}</span>
+              {showTamil ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
 
             {showTamil && (
@@ -159,20 +162,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   className="btn-listen-tamil"
                   onClick={() => onSpeak(message.tamilExplanation!, 'ta')}
                 >
-                  <Volume2 size={14} />
-                  <span>தமிழில் கேள் (Listen in Tamil)</span>
+                  <Volume2 size={13} />
+                  <span>{t.listenInTamil}</span>
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* Suggested Follow-up Response Chips */}
-        {message.suggestedResponses && message.suggestedResponses.length > 0 && onSelectSuggestion && (
+        {/* Suggested Follow-up Response Chips - Only show on the latest assistant message */}
+        {isLatestAssistantMessage && message.suggestedResponses && message.suggestedResponses.length > 0 && onSelectSuggestion && (
           <div className="suggestion-chips-container">
-            <span className="suggestion-label">Try replying:</span>
             <div className="chips-wrapper">
-              {message.suggestedResponses.map((suggestion, idx) => (
+              {message.suggestedResponses.slice(0, 3).map((suggestion, idx) => (
                 <button
                   key={idx}
                   className="suggestion-chip"

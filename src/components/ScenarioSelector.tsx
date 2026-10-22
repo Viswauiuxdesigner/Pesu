@@ -1,6 +1,7 @@
 import React from 'react';
 import { PRACTICE_SCENARIOS } from '../services/ai/scenarios';
-import { ScenarioId } from '../types/conversation';
+import { ScenarioId, InterfaceLanguage } from '../types/conversation';
+import { TRANSLATIONS } from '../utils/translations';
 import { 
   MessageSquare, 
   Briefcase, 
@@ -17,31 +18,35 @@ interface ScenarioSelectorProps {
   activeScenarioId: ScenarioId;
   onSelectScenario: (id: ScenarioId) => void;
   onClose: () => void;
+  interfaceLanguage?: InterfaceLanguage;
 }
 
 export const ScenarioSelector: React.FC<ScenarioSelectorProps> = ({
   isOpen,
   activeScenarioId,
   onSelectScenario,
-  onClose
+  onClose,
+  interfaceLanguage = 'en'
 }) => {
   if (!isOpen) return null;
+
+  const t = TRANSLATIONS[interfaceLanguage];
 
   const getScenarioIcon = (id: ScenarioId) => {
     switch (id) {
       case 'interview':
-        return <Briefcase size={22} className="scenario-icon-svg text-amber-400" />;
+        return <Briefcase size={20} className="text-orange-600" />;
       case 'office_meeting':
-        return <Users size={22} className="scenario-icon-svg text-sky-400" />;
+        return <Users size={20} className="text-orange-600" />;
       case 'everyday_chat':
-        return <Coffee size={22} className="scenario-icon-svg text-emerald-400" />;
+        return <Coffee size={20} className="text-orange-600" />;
       case 'phone_call':
-        return <PhoneCall size={22} className="scenario-icon-svg text-indigo-400" />;
+        return <PhoneCall size={20} className="text-orange-600" />;
       case 'restaurant':
-        return <Utensils size={22} className="scenario-icon-svg text-rose-400" />;
+        return <Utensils size={20} className="text-orange-600" />;
       case 'free_talk':
       default:
-        return <MessageSquare size={22} className="scenario-icon-svg text-emerald-400" />;
+        return <MessageSquare size={20} className="text-orange-600" />;
     }
   };
 
@@ -50,8 +55,8 @@ export const ScenarioSelector: React.FC<ScenarioSelectorProps> = ({
       <div className="scenario-modal-card">
         <div className="modal-header">
           <div>
-            <h3 className="modal-title">Choose Practice Scenario / பயிற்சி களம்</h3>
-            <p className="modal-subtitle">Select a real-world situation to practice speaking with confidence</p>
+            <h3 className="modal-title">{t.scenariosTitle}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{t.scenariosSubtitle}</p>
           </div>
           <button className="btn-close-modal" onClick={onClose} aria-label="Close modal">
             <X size={18} />
@@ -78,18 +83,23 @@ export const ScenarioSelector: React.FC<ScenarioSelectorProps> = ({
                   </div>
                   {isSelected && (
                     <span className="selected-tag">
-                      <Check size={14} /> Active
+                      <Check size={12} /> {t.activeTag}
                     </span>
                   )}
                 </div>
 
-                <div className="scenario-card-titles">
-                  <h4 className="scenario-title-en">{scenario.title}</h4>
-                  <span className="scenario-title-ta">{scenario.tamilTitle}</span>
+                <div className="mb-2">
+                  <h4 className="scenario-title-en">
+                    {interfaceLanguage === 'ta' ? scenario.tamilTitle : scenario.title}
+                  </h4>
+                  {interfaceLanguage !== 'ta' && (
+                    <span className="scenario-title-ta">{scenario.tamilTitle}</span>
+                  )}
                 </div>
 
-                <p className="scenario-card-desc">{scenario.description}</p>
-                <p className="scenario-card-ta-desc">{scenario.tamilDescription}</p>
+                <p className="scenario-card-desc">
+                  {interfaceLanguage === 'ta' ? scenario.tamilDescription : scenario.description}
+                </p>
               </div>
             );
           })}

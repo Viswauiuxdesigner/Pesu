@@ -1,5 +1,6 @@
 import React from 'react';
-import { SessionStats } from '../types/conversation';
+import { SessionStats, InterfaceLanguage } from '../types/conversation';
+import { TRANSLATIONS } from '../utils/translations';
 import { Award, CheckCircle2, BookOpen, Clock, MessageSquare, X, RotateCcw } from 'lucide-react';
 
 interface PracticeSummaryModalProps {
@@ -7,23 +8,27 @@ interface PracticeSummaryModalProps {
   stats: SessionStats | null;
   onClose: () => void;
   onResetSession: () => void;
+  interfaceLanguage?: InterfaceLanguage;
 }
 
 export const PracticeSummaryModal: React.FC<PracticeSummaryModalProps> = ({
   isOpen,
   stats,
   onClose,
-  onResetSession
+  onResetSession,
+  interfaceLanguage = 'en'
 }) => {
   if (!isOpen || !stats) return null;
+
+  const t = TRANSLATIONS[interfaceLanguage];
 
   return (
     <div className="modal-backdrop">
       <div className="summary-modal-card">
         <div className="modal-header">
           <div className="modal-title-group">
-            <Award size={22} className="text-amber-400" />
-            <h3 className="modal-title">Practice Session Summary / பயிற்சி சுருக்கம்</h3>
+            <Award size={20} className="text-orange-500" />
+            <h3 className="modal-title">{t.summaryTitle}</h3>
           </div>
           <button className="btn-close-modal" onClick={onClose} aria-label="Close modal">
             <X size={18} />
@@ -34,48 +39,48 @@ export const PracticeSummaryModal: React.FC<PracticeSummaryModalProps> = ({
         <div className="confidence-banner">
           <div className="score-circle">
             <span className="score-number">{stats.confidenceScore}%</span>
-            <span className="score-label">Fluency Boost</span>
+            <span className="score-label">{t.fluencyBoost}</span>
           </div>
           <div className="score-message">
-            <h4>Superb effort! மிகச்சிறப்பான முயற்சி!</h4>
-            <p>Every minute of speaking reduces hesitation. Regular practice turns English into natural habit.</p>
+            <h4>{t.effortPraise}</h4>
+            <p>{t.effortSub}</p>
           </div>
         </div>
 
         {/* Quick Stats Grid */}
         <div className="stats-pill-grid">
           <div className="stat-pill">
-            <MessageSquare size={16} />
+            <MessageSquare size={14} className="text-orange-600" />
             <span className="stat-value">{stats.spokenCount}</span>
-            <span className="stat-name">Messages Sent</span>
+            <span className="stat-name">{t.messagesSent}</span>
           </div>
           <div className="stat-pill">
-            <Clock size={16} />
+            <Clock size={14} className="text-orange-600" />
             <span className="stat-value">{stats.durationMinutes} min</span>
-            <span className="stat-name">Practice Time</span>
+            <span className="stat-name">{t.practiceTime}</span>
           </div>
           <div className="stat-pill">
-            <CheckCircle2 size={16} />
+            <CheckCircle2 size={14} className="text-orange-600" />
             <span className="stat-value">{stats.correctionsCount}</span>
-            <span className="stat-name">Speaking Tips</span>
+            <span className="stat-name">{t.speakingTips}</span>
           </div>
         </div>
 
-        {/* Useful Phrases Learned */}
+        {/* Useful Phrases Practiced */}
         <div className="summary-section">
           <h5 className="section-title">
-            <BookOpen size={16} className="text-emerald-400" /> Key Phrases Practiced:
+            <BookOpen size={15} className="text-orange-600" /> {t.keyPhrasesPracticed}
           </h5>
           <div className="phrases-list">
             {stats.phrasesLearned.length > 0 ? (
               stats.phrasesLearned.map((phrase, idx) => (
                 <div key={idx} className="phrase-item">
                   <span className="phrase-bullet">✓</span>
-                  <span className="phrase-text">{phrase}</span>
+                  <span className="text-sm">{phrase}</span>
                 </div>
               ))
             ) : (
-              <p className="empty-text">No grammar corrections were needed in this round! Great job.</p>
+              <p className="text-xs text-gray-500">{t.noCorrectionsNeeded}</p>
             )}
           </div>
         </div>
@@ -87,8 +92,8 @@ export const PracticeSummaryModal: React.FC<PracticeSummaryModalProps> = ({
             className="btn-modal-action btn-secondary"
             onClick={onResetSession}
           >
-            <RotateCcw size={16} />
-            <span>Start New Session</span>
+            <RotateCcw size={14} />
+            <span>{t.startNewSession}</span>
           </button>
 
           <button 
@@ -96,7 +101,7 @@ export const PracticeSummaryModal: React.FC<PracticeSummaryModalProps> = ({
             className="btn-modal-action btn-primary"
             onClick={onClose}
           >
-            Continue Practice
+            {t.continuePractice}
           </button>
         </div>
       </div>
